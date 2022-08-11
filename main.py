@@ -1,4 +1,4 @@
-from typing import List, Literal, NewType, Dict, Set
+from typing import List, Literal, NewType, Dict, Set, Tuple
 from random import randint, sample
 from pydantic import BaseModel
 from faker import Faker
@@ -32,6 +32,10 @@ class Pool(BaseModel):
 class Dex(BaseModel):
     name: str
     pools: List[Pool]
+
+
+# Graph modelsn
+Edge = Tuple[Dex, Dex]
 
 
 # creating mocks

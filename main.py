@@ -1,20 +1,19 @@
-from typing import List, Literal, NewType, Dict, Set, Tuple
-from random import randint, sample
-from pydantic import BaseModel
+from random import randint
+from random import sample
+from typing import List
+from typing import Literal
+from typing import NewType
+from typing import Set
+from typing import Tuple
+
 from faker import Faker
-
-fake = Faker()
-
+from pydantic import BaseModel
 
 # Token price to USD
 USDPrice = NewType("USDPrice", float)
-randPrice = lambda: USDPrice(randint(1, 100) / 5)
 
 # Token Symbols
 Token = Literal["A", "B", "C", "D", "E", "F"]
-
-Tokens: Set[Token] = {"A", "B", "C", "D", "E", "F"}
-Prices: Dict[Token, USDPrice] = {tk: randPrice() for tk in Tokens}
 
 
 # models & classes
@@ -38,10 +37,33 @@ class Dex(BaseModel):
 Edge = Tuple[Dex, Dex]
 
 
-# creating mocks
+# creating mock data
+fake = Faker()
+
+Tokens: Set[Token] = {"A", "B", "C", "D", "E", "F"}
+
+
+def random_token_price():
+    return USDPrice(randint(1, 100) / 5)
+
+
+def random_swap_fee():
+    return randint(1, 5) / 100
+
+
+def create_random_token_prices():
+    return {tk: random_token_price() for tk in Tokens}
+
+
 def create_pool_tokens(count: int) -> List[PoolToken]:
     tokens = sample(Tokens, count)
-    return [PoolToken(token=token, reserve=randint(100, 1000)) for token in tokens]
+    return [
+        PoolToken(
+            token=token,
+            reserve=randint(100, 1000),
+        )
+        for token in tokens
+    ]
 
 
 def create_pool(token_count: int, fee: float) -> Pool:
@@ -51,14 +73,20 @@ def create_pool(token_count: int, fee: float) -> Pool:
 
 
 def create_many_pools(count: int) -> List[Pool]:
-    randomFee = lambda: randint(1, 5) / 100
-    pool = lambda: create_pool(randint(2, 6), randomFee())
-    return [pool() for _ in range(count)]
+    return [
+        create_pool(
+            randint(2, 6),
+            random_swap_fee(),
+        )
+        for _ in range(count)
+    ]
 
 
 def create_dexes(count: int) -> List[Dex]:
-    dex = lambda: Dex(
-        pools=create_many_pools(randint(1, 10)),
-        name="-".join(fake.words(nb=3)),
-    )
-    return [dex() for _ in range(count)]
+    return [
+        Dex(
+            pools=create_many_pools(randint(1, 10)),
+            name="-".join(fake.words(nb=3)),
+        )
+        for _ in range(count)
+    ]

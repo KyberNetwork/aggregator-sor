@@ -1,9 +1,15 @@
+from typing import List
 from typing import Tuple
-from unittest import TestCase, main
-from main import *
+from unittest import main
+from unittest import TestCase
+
+from main import create_dexes
+from main import Dex
+from main import Edge
+from main import Token
 
 
-class SmartOrderRouter(BaseModel):
+class SmartOrderRouter:
     """TO BE IMPLEMENTED"""
 
     dexes: List[Dex] = []

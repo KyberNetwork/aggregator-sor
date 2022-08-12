@@ -5,10 +5,10 @@ from unittest import TestCase
 
 from rich import pretty
 
-from main import create_dexes
 from main import Dex
 from main import Edge
 from main import Token
+from mock import create_dexes
 
 
 class SmartOrderRouter:

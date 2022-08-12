@@ -3,8 +3,6 @@ from typing import Tuple
 from unittest import main
 from unittest import TestCase
 
-from rich import pretty
-
 from main import Dex
 from main import Edge
 from main import Token
@@ -54,5 +52,4 @@ class AlgoTest(TestCase):
 
 
 if __name__ == "__main__":
-    pretty.install()
     main(verbosity=2)

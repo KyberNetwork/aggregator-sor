@@ -42,6 +42,7 @@ class AlgoTest(TestCase):
     def test_case_1(self):
         dexes = create_dexes(3)
         self.sor.dexes = dexes
+        print(self.sor.dexes[0])
         assert len(self.sor.dexes) == len(dexes)
         assert self.sor.findBestPriceIn("A", 10, "B")[0]
 

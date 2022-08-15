@@ -1,6 +1,7 @@
 from typing import List
 from typing import Literal
 from typing import NewType
+from typing import Set
 from typing import Tuple
 
 from pydantic import BaseModel
@@ -10,6 +11,7 @@ USDPrice = NewType("USDPrice", float)
 
 # Token Symbols
 Token = Literal["A", "B", "C", "D", "E", "F"]
+Tokens: Set[Token] = {"A", "B", "C", "D", "E", "F"}
 
 
 # models & classes

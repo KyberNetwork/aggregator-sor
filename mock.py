@@ -3,15 +3,16 @@
 from random import randint
 from random import sample
 from typing import List
-from typing import Set
 
 from faker import Faker
 
-from main import *
+from main import Dex
+from main import Pool
+from main import PoolToken
+from main import Tokens
+from main import USDPrice
 
 fake = Faker()
-
-Tokens: Set[Token] = {"A", "B", "C", "D", "E", "F"}
 
 
 def random_token_price():
@@ -46,7 +47,7 @@ def create_pool(token_count: int, fee: float) -> Pool:
 def create_many_pools(count: int) -> List[Pool]:
     return [
         create_pool(
-            randint(2, 6),
+            randint(2, 4),
             random_swap_fee(),
         )
         for _ in range(count)
@@ -56,7 +57,7 @@ def create_many_pools(count: int) -> List[Pool]:
 def create_dexes(count: int) -> List[Dex]:
     return [
         Dex(
-            pools=create_many_pools(randint(1, 10)),
+            pools=create_many_pools(randint(1, 3 * count)),
             name="-".join(fake.words(nb=3)),
         )
         for _ in range(count)

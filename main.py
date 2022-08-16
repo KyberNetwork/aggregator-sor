@@ -1,17 +1,41 @@
+from random import randint
+from typing import Dict
 from typing import List
 from typing import Literal
-from typing import NewType
 from typing import Set
 from typing import Tuple
 
 from pydantic import BaseModel
 
-# Token price to USD
-USDPrice = NewType("USDPrice", float)
+
+class USDPrice:
+    """Token price to USD"""
+
+    __v: int
+
+    def __init__(self, value):
+        self.__v = value
+
+    def __repr__(self):
+        return f"${self.__v}"
+
+    def __mul__(self, number: int):
+        return self.__v * number
+
+    def __add__(self, number: int):
+        return self.__v + number
+
+    def __sub__(self, number: int):
+        return self.__v - number
+
 
 # Token Symbols
 Token = Literal["A", "B", "C", "D", "E", "F"]
 Tokens: Set[Token] = {"A", "B", "C", "D", "E", "F"}
+
+TokenUnitPrices: Dict[Token, USDPrice] = {
+    token: USDPrice(randint(1, 10)) for token in Tokens
+}
 
 
 # models & classes
@@ -20,7 +44,8 @@ class PoolToken(BaseModel):
     reserve: int
 
     def __str__(self):
-        return f"[{self.token}] {self.reserve}"
+        reserveUsd = TokenUnitPrices[self.token] * self.reserve
+        return f"[{self.token}] {self.reserve} (${reserveUsd})"
 
 
 class Pool(BaseModel):

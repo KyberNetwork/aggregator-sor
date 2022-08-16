@@ -62,9 +62,11 @@ class Pool(BaseModel):
 class Dex(BaseModel):
     name: str
     pools: List[Pool]
+    gas: int
 
     def __str__(self):
-        title = f"\nDEX: {self.name} ({len(self.pools)} pools)"
+        dex_info = f"({len(self.pools)} pools) (gas: {self.gas})"
+        title = f"\nDEX: {self.name} {dex_info}"
         pools = "\n\t".join([str(p) for p in self.pools])
         return title + "\n\t" + pools
 

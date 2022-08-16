@@ -55,10 +55,11 @@ def create_many_pools(count: int) -> List[Pool]:
 
 
 def create_dexes(count: int) -> List[Dex]:
-    return [
-        Dex(
+    def create_single_dex():
+        return Dex(
             pools=create_many_pools(randint(1, 3 * count)),
             name="-".join(fake.words(nb=3)),
+            gas=randint(10, 20),
         )
-        for _ in range(count)
-    ]
+
+    return [create_single_dex() for _ in range(count)]

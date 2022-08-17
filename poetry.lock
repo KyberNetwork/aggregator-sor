@@ -57,7 +57,7 @@ python-versions = "*"
 
 [[package]]
 name = "faker"
-version = "13.15.1"
+version = "13.16.0"
 description = "Faker is a Python package that generates fake data for you."
 category = "main"
 optional = false

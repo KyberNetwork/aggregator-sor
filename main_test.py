@@ -6,36 +6,19 @@ from unittest import main
 from unittest import TestCase
 
 from main import Dex
-from main import Edge
 from main import Pool
 from main import PoolToken
 from main import Token
 from main import Tokens
-from mock import create_dexes
 
 
 class SmartOrderRouter:
     """TO BE IMPLEMENTED"""
 
     dexes: List[Dex] = []
+    map_token_pools: Dict[Token, Set[str]] = dict()
 
-    def calculate_token_amount_out_by_pool(
-        self, token_in: Token, token_out: Token, pool: Pool
-    ):
-        if token_in == token_out:
-            raise ValueError("TokenIn == TokenOut")
-
-        token_pair = {token_in, token_out}
-        pool_token_pairs = [t for t in pool.tokens if t.token in token_pair]
-
-        if len(pool_token_pairs) < 2:
-            return 0
-
-        # FIXME: need token USD price
-        # calculate price using Constant Product AMM
-        return -1
-
-    def map_token_pools(self) -> Dict[Token, Set[str]]:
+    def make_map_token_pools(self):
         result: Dict[Token, Set[str]] = {token: set() for token in Tokens}
 
         for dex in self.dexes:
@@ -43,11 +26,11 @@ class SmartOrderRouter:
                 for ptk in pool.tokens:
                     result[ptk.token].add(pool.name)
 
-        return result
+        self.map_token_pools = result
 
     def find_best_price_out(
         self, token_in: Token, amount_in: int, token_out: Token
-    ) -> Tuple[int, List[Edge]]:
+    ) -> Tuple[float, List[Tuple[Dex, float]]]:
         """Return the maximum amount of token out for result
         If not possible, return -1
         """
@@ -55,7 +38,7 @@ class SmartOrderRouter:
 
     def find_best_price_in(
         self, token_out: Token, amount_out: int, token_in: Token
-    ) -> Tuple[int, List[Edge]]:
+    ) -> Tuple[float, List[Tuple[Dex, float]]]:
         """Return the minimum amount of token in for result
         If not possible, return -1
         """
@@ -69,7 +52,7 @@ class AlgoTest(TestCase):
         self.sor = SmartOrderRouter()
         print("\n======================== TEST CASE =====================\n")
 
-    def test_model(self):
+    def test_case_0(self):
         tokens = [
             PoolToken(token="USDC", amount=50000),
             PoolToken(token="USDT", amount=50000),
@@ -108,16 +91,16 @@ class AlgoTest(TestCase):
         print("\n Swap with excessive amount\n", pool)
 
     def test_case_1(self):
-        dexes = create_dexes(1)
-        self.sor.dexes = dexes
-        assert len(self.sor.dexes) == len(dexes)
-        assert self.sor.find_best_price_in("ETH", 10, "TOMO")[0]
+        pool1 = Pool("p1", 0.01, [PoolToken(token='BTC', amount=20), PoolToken(token='ETH', amount=100)])
+        uniswap = Dex(name="Uniswap", pools=[pool1], gas=0.2)
 
-    def test_case_2(self):
-        dexes = create_dexes(30)
-        self.sor.dexes = dexes
-        assert len(self.sor.dexes) == len(dexes)
-        assert self.sor.find_best_price_out("ETH", 10, "BTC")[0]
+        pool2 = Pool("p1", 0.01, [PoolToken(token='BTC', amount=200), PoolToken(token='ETH', amount=1100)])
+        metaswap = Dex(name="Metaswap", pools=[pool2], gas=0.4)
+
+        self.sor.dexes = [uniswap, metaswap]
+
+        result = self.sor.find_best_price_out('ETH', 2, 'BTC')
+
 
 
 if __name__ == "__main__":

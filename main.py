@@ -154,7 +154,3 @@ class Dex(BaseModel):
         title = f"\nDEX: {self.name} {dex_info}"
         pools = "\n\t".join([str(p) for p in self.pools])
         return title + "\n\t" + pools
-
-
-# Graph modelsn
-Edge = Tuple[Dex, Dex]

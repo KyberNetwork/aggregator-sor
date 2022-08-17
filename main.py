@@ -68,9 +68,12 @@ def amm_swap(delta_x: float, x: float, y: float) -> float:
 class PoolToken(BaseModel):
     token: Token
     amount: float
+    weight: Optional[float]
 
     def __str__(self):
-        return f"[{self.token}] {self.amount} (${self.reserve})"
+        title = f"[{self.token}] {self.amount}\n"
+        info = f"(reserve=${self.reserve}, weight={self.weight})\n"
+        return title + info
 
     @property
     def reserve(self) -> float:
@@ -88,18 +91,29 @@ class Pool(BaseModel):
     tokens: List[PoolToken]
     fee: float
     k: Optional[float]
+    tvl: Optional[float]
 
     def __init__(self, name: str, fee: float, tokens: List[PoolToken]):
         super(Pool, self).__init__(name=name, tokens=tokens, fee=fee)
+        self._update_tvl()
         self._update_k()
+        self._set_token_weights()
 
     def __str__(self):
         title = f"POOL: {self.name} (fee: {self.fee}) [k={self.k}]"
-        tokens = (" " * 5).join([str(t) for t in self.tokens])
-        return title + "\n\t\t" + tokens
+        tokens = ("-" * 3).join([str(t) for t in self.tokens])
+        return title + "\n---" + tokens
+
+    def _update_tvl(self):
+        self.tvl = sum([t.reserve for t in self.tokens])
 
     def _update_k(self):
         self.k = reduce(lambda x, y: x * y, [t.reserve for t in self.tokens])
+
+    def _set_token_weights(self):
+        assert self.tvl
+        for tk in self.tokens:
+            tk.weight = tk.reserve / self.tvl
 
     def has_token(self, token: Token) -> Optional[PoolToken]:
         return next((t for t in self.tokens if t.token == token), None)
@@ -133,7 +147,9 @@ class Pool(BaseModel):
         if do_swap:
             pool_token_in.update_amount(amount_in)
             pool_token_out.update_amount(-delta_amount)
+            self._update_tvl()
             self._update_k()
+            self._set_token_weights()
 
         return amount_in, delta_amount
 

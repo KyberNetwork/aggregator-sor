@@ -1,6 +1,7 @@
+from typing import Any
 from typing import Dict
 from typing import List
-from typing import Set
+from typing import Optional
 from typing import Tuple
 from unittest import main
 from unittest import TestCase
@@ -15,16 +16,25 @@ from main import Tokens
 class SmartOrderRouter:
     """TO BE IMPLEMENTED"""
 
-    dexes: List[Dex] = []
-    map_token_pools: Dict[Token, Set[str]] = dict()
+    _dexes: Optional[List[Dex]] = None
+    map_token_pools: Optional[Dict[Token, List[Tuple[str, float]]]] = None
 
-    def make_map_token_pools(self):
-        result: Dict[Token, Set[str]] = {token: set() for token in Tokens}
+    @property
+    def dexes(self):
+        return self._dexes
 
-        for dex in self.dexes:
+    @dexes.setter
+    def dexes(self, dexes: List[Dex]):
+        self._dexes = dexes
+        self._make_map_token_pools(self._dexes)
+
+    def _make_map_token_pools(self, dexes: List[Dex]):
+        result: Dict[Token, List[Any]] = {token: [] for token in Tokens}
+        for dex in dexes:
             for pool in dex.pools:
                 for ptk in pool.tokens:
-                    result[ptk.token].add(pool.name)
+                    result[ptk.token].append((pool.name, ptk.weight))
+                    result[ptk.token].sort(key=lambda t: t[1], reverse=True)
 
         self.map_token_pools = result
 
@@ -50,7 +60,6 @@ class AlgoTest(TestCase):
 
     def setUp(self) -> None:
         self.sor = SmartOrderRouter()
-        print("\n======================== TEST CASE =====================\n")
 
     def test_case_0(self):
         tokens = [
@@ -96,12 +105,13 @@ class AlgoTest(TestCase):
         pool1 = Pool("p1", 0.01, [tk1, tk2])
         uniswap = Dex(name="Uniswap", pools=[pool1], gas=0.2)
 
-        tk3 = PoolToken(token="BTC", amount=200)
+        tk3 = PoolToken(token="BTC", amount=2000)
         tk4 = PoolToken(token="ETH", amount=1100)
-        pool2 = Pool("p1", 0.01, [tk3, tk4])
+        pool2 = Pool("p2", 0.01, [tk3, tk4])
         metaswap = Dex(name="Metaswap", pools=[pool2], gas=0.4)
 
         self.sor.dexes = [uniswap, metaswap]
+        print(self.sor.map_token_pools)
 
         self.sor.find_best_price_out("ETH", 2, "BTC")
 

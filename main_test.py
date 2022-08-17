@@ -91,24 +91,14 @@ class AlgoTest(TestCase):
         print("\n Swap with excessive amount\n", pool)
 
     def test_case_1(self):
-        pool1 = Pool(
-            "p1",
-            0.01,
-            [
-                PoolToken(token="BTC", amount=20),
-                PoolToken(token="ETH", amount=100),
-            ],
-        )
+        tk1 = PoolToken(token="BTC", amount=20)
+        tk2 = PoolToken(token="ETH", amount=100)
+        pool1 = Pool("p1", 0.01, [tk1, tk2])
         uniswap = Dex(name="Uniswap", pools=[pool1], gas=0.2)
 
-        pool2 = Pool(
-            "p1",
-            0.01,
-            [
-                PoolToken(token="BTC", amount=200),
-                PoolToken(token="ETH", amount=1100),
-            ],
-        )
+        tk3 = PoolToken(token="BTC", amount=200)
+        tk4 = PoolToken(token="ETH", amount=1100)
+        pool2 = Pool("p1", 0.01, [tk3, tk4])
         metaswap = Dex(name="Metaswap", pools=[pool2], gas=0.4)
 
         self.sor.dexes = [uniswap, metaswap]

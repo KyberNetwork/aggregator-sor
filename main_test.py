@@ -8,8 +8,10 @@ from unittest import TestCase
 from main import Dex
 from main import Edge
 from main import Pool
+from main import PoolToken
 from main import Token
 from main import Tokens
+from main import TokenUnitPrices
 from mock import create_dexes
 
 
@@ -67,7 +69,46 @@ class AlgoTest(TestCase):
     def setUp(self) -> None:
         self.sor = SmartOrderRouter()
 
+    def test_model(self):
+        tokens = [
+            PoolToken(token="USDC", amount=50000),
+            PoolToken(token="USDT", amount=50000),
+        ]
+
+        pool = Pool(name="x", fee=0.01, tokens=tokens)
+
+        # Test confirm valid reserve
+        assert pool.k == tokens[0].reserve * tokens[1].reserve == 2_500_000_000
+
+        # Test invalid swaps
+        expect = (0, 0)
+        invalid_swap = pool.swap("USDT", 1, "ETH")
+        assert invalid_swap == expect
+        invalid_swap = pool.swap("ETH", 1, "USDT")
+        assert invalid_swap == expect
+        invalid_swap = pool.swap("USDT", 1, "USDT")
+        assert invalid_swap == expect
+        invalid_swap = pool.swap("ETH", 1, "ETH")
+        assert invalid_swap == expect
+
+        # Test valid swap
+        expect = (7000, 6086.421921658177)
+        result = pool.swap("USDT", 7000, "USDC")
+        assert expect == result
+
+        expect = (7, 6.9290396351061645)
+        result = pool.swap("USDT", 7, "USDC")
+        assert expect == result
+
+        print("\n Before swap\n", pool)
+        pool.swap("USDT", 7000, "USDC", do_swap=True)
+        print("\n After swap\n", pool)
+
+        pool.swap("USDT", 10000000000, "USDC", do_swap=True)
+        print("\n Swap with excessive amount\n", pool)
+
     def test_case_1(self):
+        print(TokenUnitPrices)
         dexes = create_dexes(1)
         self.sor.dexes = dexes
 
@@ -78,13 +119,13 @@ class AlgoTest(TestCase):
         print(map_token_pools)
 
         assert len(self.sor.dexes) == len(dexes)
-        assert self.sor.find_best_price_in("A", 10, "B")[0]
+        assert self.sor.find_best_price_in("ETH", 10, "TOMO")[0]
 
     def test_case_2(self):
         dexes = create_dexes(30)
         self.sor.dexes = dexes
         assert len(self.sor.dexes) == len(dexes)
-        assert self.sor.find_best_price_out("A", 10, "B")[0]
+        assert self.sor.find_best_price_out("ETH", 10, "BTC")[0]
 
 
 if __name__ == "__main__":

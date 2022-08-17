@@ -41,7 +41,7 @@ def create_pool_tokens(count: int) -> List[PoolToken]:
 def create_pool(token_count: int, fee: float) -> Pool:
     tokens = create_pool_tokens(token_count)
     name = "-".join(fake.words(nb=2))
-    return Pool(tokens=tokens, fee=fee, name=name)
+    return Pool(name, fee, tokens)
 
 
 def create_many_pools(count: int) -> List[Pool]:

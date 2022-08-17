@@ -32,7 +32,7 @@ def create_pool_tokens(count: int) -> List[PoolToken]:
     return [
         PoolToken(
             token=token,
-            reserve=randint(100, 1000),
+            amount=randint(10, 100),
         )
         for token in tokens
     ]

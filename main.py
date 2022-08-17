@@ -1,3 +1,4 @@
+from functools import reduce
 from random import randint
 from typing import Dict
 from typing import List
@@ -30,33 +31,49 @@ class USDPrice:
 
 
 # Token Symbols
-Token = Literal["A", "B", "C", "D", "E", "F"]
-Tokens: Set[Token] = {"A", "B", "C", "D", "E", "F"}
+Token = Literal["BTC", "ETH", "USDC", "TOMO", "KNC", "SOL"]
+Tokens: Set[Token] = {"BTC", "ETH", "USDC", "TOMO", "KNC", "SOL"}
+
+
+def set_token_price(token: Token) -> USDPrice:
+    price = 1 if token == "USDC" else randint(2, 5)
+    return USDPrice(price)
+
 
 TokenUnitPrices: Dict[Token, USDPrice] = {
-    token: USDPrice(randint(1, 10)) for token in Tokens
+    token: set_token_price(token) for token in Tokens
 }
 
 
 # models & classes
 class PoolToken(BaseModel):
     token: Token
-    reserve: int
+    amount: int
 
     def __str__(self):
-        reserveUsd = TokenUnitPrices[self.token] * self.reserve
-        return f"[{self.token}] {self.reserve} (${reserveUsd})"
+        return f"[{self.token}] {self.amount} (${self.reserve})"
+
+    @property
+    def reserve(self) -> int:
+        price = TokenUnitPrices[self.token]
+        return price * self.amount
 
 
 class Pool(BaseModel):
+    """Swap calculation based on Constant product market maker (x*y=k)"""
+
     name: str
     tokens: List[PoolToken]
     fee: float
 
     def __str__(self):
-        title = f"POOL: {self.name} (fee: {self.fee})"
+        title = f"POOL: {self.name} (fee: {self.fee}) [k={self.k}]"
         tokens = (" " * 5).join([str(t) for t in self.tokens])
         return title + "\n\t\t" + tokens
+
+    @property
+    def k(self):
+        return reduce(lambda x, y: x * y, [t.reserve for t in self.tokens])
 
 
 class Dex(BaseModel):

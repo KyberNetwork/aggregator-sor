@@ -56,17 +56,12 @@ def price_to_amount(token: Token, price: float) -> float:
     return price / unit_price
 
 
-def amm_swap(new_x: float, x: float, y: float, k: float) -> float:
-    """return delta(y)
-    x * y * ...rest = k
-    x * y = k / ...rest = x' * y'
-    y' = k / (x' * ...rest)
-    Ref: https://youtu.be/1PbZMudPP5E?t=228
+def amm_swap(delta_x: float, x: float, y: float) -> float:
+    """Ref: https://youtu.be/1PbZMudPP5E?t=228
+    x * y = k = (x + delta_x) * (y + delta_y)
+    ==> delta_y = (y * delta_x) / (x + delta_x)
     """
-    rest = k / (x * y)
-    new_y = k / (rest * new_x)
-    delta = y - new_y
-    return delta
+    return (y * delta_x) / (x + delta_x)
 
 
 # models & classes
@@ -131,9 +126,8 @@ class Pool(BaseModel):
 
         amount_in_after_fee = amount_in * (1 - self.fee)
         x, y = pool_token_in.reserve, pool_token_out.reserve
-        new_token_in_mount = amount_in_after_fee + pool_token_in.amount
-        new_x = calc_value(token_in, new_token_in_mount)
-        delta_y = amm_swap(new_x, x, y, self.k)
+        delta_x = calc_value(token_in, amount_in_after_fee)
+        delta_y = amm_swap(delta_x, x, y)
         delta_amount = price_to_amount(token_out, delta_y)
 
         if do_swap:

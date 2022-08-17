@@ -79,7 +79,7 @@ class AlgoTest(TestCase):
         result = pool.swap("USDT", 7000, "USDC")
         assert expect == result
 
-        expect = (7, 6.9290396351061645)
+        expect = (7, 6.929039635106574)
         result = pool.swap("USDT", 7, "USDC")
         assert expect == result
 
@@ -91,16 +91,29 @@ class AlgoTest(TestCase):
         print("\n Swap with excessive amount\n", pool)
 
     def test_case_1(self):
-        pool1 = Pool("p1", 0.01, [PoolToken(token='BTC', amount=20), PoolToken(token='ETH', amount=100)])
+        pool1 = Pool(
+            "p1",
+            0.01,
+            [
+                PoolToken(token="BTC", amount=20),
+                PoolToken(token="ETH", amount=100),
+            ],
+        )
         uniswap = Dex(name="Uniswap", pools=[pool1], gas=0.2)
 
-        pool2 = Pool("p1", 0.01, [PoolToken(token='BTC', amount=200), PoolToken(token='ETH', amount=1100)])
+        pool2 = Pool(
+            "p1",
+            0.01,
+            [
+                PoolToken(token="BTC", amount=200),
+                PoolToken(token="ETH", amount=1100),
+            ],
+        )
         metaswap = Dex(name="Metaswap", pools=[pool2], gas=0.4)
 
         self.sor.dexes = [uniswap, metaswap]
 
-        result = self.sor.find_best_price_out('ETH', 2, 'BTC')
-
+        self.sor.find_best_price_out("ETH", 2, "BTC")
 
 
 if __name__ == "__main__":

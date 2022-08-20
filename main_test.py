@@ -7,7 +7,6 @@ from unittest import main
 from unittest import TestCase
 
 from pprint import pprint
-from json import dumps
 
 from main import Dex
 from main import Pool

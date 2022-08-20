@@ -6,6 +6,9 @@ from typing import Tuple
 from unittest import main
 from unittest import TestCase
 
+from pprint import pprint
+from json import dumps
+
 from main import Dex
 from main import Pool
 from main import PoolToken
@@ -37,6 +40,25 @@ class SmartOrderRouter:
                     result[ptk.token].sort(key=lambda t: t[1], reverse=True)
 
         self.map_token_pools = result
+
+    def edges(self):
+        assert self.dexes
+        result = {}
+        for d in self.dexes:
+            for p in d.pools:
+                for t in p.tokens:
+                   to_tokens = [tt.token for tt in p.tokens if tt != t]
+
+                   if t.token not in result:
+                       result.update({t.token: {}})
+
+                   for ttk in to_tokens:
+                       if ttk not in result[t.token]:
+                           result[t.token].update({ttk: set()})
+
+                       result[t.token][ttk].add(p.name)
+        return result
+
 
     def find_best_price_out(
         self, token_in: Token, amount_in: int, token_out: Token
@@ -110,10 +132,19 @@ class AlgoTest(TestCase):
         pool2 = Pool("p2", 0.01, [tk3, tk4])
         metaswap = Dex(name="Metaswap", pools=[pool2], gas=0.4)
 
-        self.sor.dexes = [uniswap, metaswap]
+        tk5 = PoolToken(token="USDC", amount=2000)
+        tk6 = PoolToken(token="BTC", amount=1100)
+        tk7 = PoolToken(token="TOMO", amount=1100)
+        pool3 = Pool("p3", 0.01, [tk5, tk6, tk7])
+        luaswap = Dex(name="Luaswap", pools=[pool3], gas=0.3)
+
+        self.sor.dexes = [uniswap, metaswap, luaswap]
         print(self.sor.map_token_pools)
 
         self.sor.find_best_price_out("ETH", 2, "BTC")
+
+
+        pprint(self.sor.edges(), indent=4, width=2)
 
 
 if __name__ == "__main__":

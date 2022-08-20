@@ -1,79 +1,11 @@
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
+from pprint import pprint
 from unittest import main
 from unittest import TestCase
-
-from pprint import pprint
 
 from main import Dex
 from main import Pool
 from main import PoolToken
-from main import Token
-from main import Tokens
-
-
-class SmartOrderRouter:
-    """TO BE IMPLEMENTED"""
-
-    _dexes: Optional[List[Dex]] = None
-    map_token_pools: Optional[Dict[Token, List[Tuple[str, float]]]] = None
-
-    @property
-    def dexes(self):
-        return self._dexes
-
-    @dexes.setter
-    def dexes(self, dexes: List[Dex]):
-        self._dexes = dexes
-        self._make_map_token_pools(self._dexes)
-
-    def _make_map_token_pools(self, dexes: List[Dex]):
-        result: Dict[Token, List[Any]] = {token: [] for token in Tokens}
-        for dex in dexes:
-            for pool in dex.pools:
-                for ptk in pool.tokens:
-                    result[ptk.token].append((pool.name, ptk.weight))
-                    result[ptk.token].sort(key=lambda t: t[1], reverse=True)
-
-        self.map_token_pools = result
-
-    def edges(self):
-        assert self.dexes
-        result = {}
-        for d in self.dexes:
-            for p in d.pools:
-                for t in p.tokens:
-                   to_tokens = [tt.token for tt in p.tokens if tt != t]
-
-                   if t.token not in result:
-                       result.update({t.token: {}})
-
-                   for ttk in to_tokens:
-                       if ttk not in result[t.token]:
-                           result[t.token].update({ttk: set()})
-
-                       result[t.token][ttk].add(p.name)
-        return result
-
-
-    def find_best_price_out(
-        self, token_in: Token, amount_in: int, token_out: Token
-    ) -> Tuple[float, List[Tuple[Dex, float]]]:
-        """Return the maximum amount of token out for result
-        If not possible, return -1
-        """
-        return -1, []
-
-    def find_best_price_in(
-        self, token_out: Token, amount_out: int, token_in: Token
-    ) -> Tuple[float, List[Tuple[Dex, float]]]:
-        """Return the minimum amount of token in for result
-        If not possible, return -1
-        """
-        return -1, []
+from sor import SmartOrderRouter
 
 
 class AlgoTest(TestCase):
@@ -137,14 +69,31 @@ class AlgoTest(TestCase):
         pool3 = Pool("p3", 0.01, [tk5, tk6, tk7])
         luaswap = Dex(name="Luaswap", pools=[pool3], gas=0.3)
 
-        self.sor.dexes = [uniswap, metaswap, luaswap]
+        tk8 = PoolToken(token="USDC", amount=2000)
+        tk9 = PoolToken(token="ETH", amount=1100)
+        pool4 = Pool("p4", 0.01, [tk8, tk9])
+        vuswap = Dex(name="Vuswap", pools=[pool4], gas=0.3)
+
+        tk10 = PoolToken(token="SOL", amount=2000)
+        tk11 = PoolToken(token="ETH", amount=1100)
+        pool5 = Pool("p5", 0.01, [tk10, tk11])
+        kyberswap = Dex(name="Kyberswap", pools=[pool5], gas=0.3)
+
+        self.sor.dexes = [uniswap, metaswap, luaswap, vuswap, kyberswap]
         print(self.sor.map_token_pools)
 
         self.sor.find_best_price_out("ETH", 2, "BTC")
 
+        edge_map, edges = self.sor.token_graph
+        pprint(edge_map, indent=4, width=2)
+        print(edges)
 
-        pprint(self.sor.edges(), indent=4, width=2)
+        result = self.sor.find_paths("TOMO", "ETH")
+        print("\n-------- SWAPPING ROUTES \n", result)
 
 
 if __name__ == "__main__":
-    main(verbosity=2)
+    try:
+        main(verbosity=2)
+    except Exception:
+        pass

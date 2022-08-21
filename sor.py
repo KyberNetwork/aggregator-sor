@@ -76,17 +76,12 @@ class SmartOrderRouter:
             token: Token,
             paths: List[List[Token]],
             queue=None,
-            visited=None,
             hop_limit=None,
         ):
             if not queue:
                 queue = []
 
-            if not visited:
-                visited = set()
-
             queue.append(token)
-            visited.add(token)
 
             if hop_limit and len(queue) > hop_limit:
                 return
@@ -97,9 +92,6 @@ class SmartOrderRouter:
                 return
 
             for node in graph[token].keys():
-                if node in visited:
-                    continue
-
                 if len(queue) >= 2 and node == queue[-2]:
                     continue
 
@@ -107,15 +99,14 @@ class SmartOrderRouter:
                     node,
                     paths,
                     queue=queue,
-                    visited=visited,
                     hop_limit=hop_limit,
                 )
 
                 while queue[-1] != token:
-                    visited.remove(queue.pop())
+                    queue.pop()
 
         result: List[List[Token]] = []
-        trace(token_in, paths=result, hop_limit=3)
+        trace(token_in, paths=result, hop_limit=4)
         return result
 
     def find_best_price_out(

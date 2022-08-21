@@ -90,18 +90,15 @@ class SmartOrderRouter:
             if token == token_out:
                 path = queue.copy()
                 paths.append(path)
-                return 1
-
-            visits = []
+                return
 
             for node in graph[token].keys():
                 if node in visited:
                     continue
+
                 if len(queue) >= 2 and node == queue[-2]:
                     continue
-                visits.append(node)
 
-            for node in visits:
                 trace(node, paths, queue=queue, visited=visited)
 
                 while queue[-1] != token:

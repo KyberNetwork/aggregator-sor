@@ -164,3 +164,14 @@ class Dex(BaseModel):
         title = f"\nDEX: {self.name} {dex_info}"
         pools = "\n\t".join([str(p) for p in self.pools])
         return title + "\n\t" + pools
+
+
+class SwapPath(BaseModel):
+    amount_in: float
+    token_in: Token
+    token_out: Token
+    pool: Pool
+
+
+class SwapRoute(BaseModel):
+    paths: List[SwapPath]

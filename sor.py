@@ -6,6 +6,8 @@ from typing import Set
 from typing import Tuple
 
 from main import Dex
+from main import Pool
+from main import SwapRoute
 from main import Token
 from main import Tokens
 
@@ -15,6 +17,7 @@ class SmartOrderRouter:
 
     _dexes: Optional[List[Dex]] = None
     map_token_pools: Dict[Token, List[Tuple[str, float]]]
+    map_name_pools: Dict[str, Pool]
     token_graph: Tuple[Dict[Token, Dict[Token, Set[str]]], Set[str]]
 
     @property
@@ -24,18 +27,29 @@ class SmartOrderRouter:
     @dexes.setter
     def dexes(self, dexes: List[Dex]):
         self._dexes = dexes
-        self._make_map_token_pools(self._dexes)
+        self._make_map_token_pools()
+        self._make_map_name_pool()
         self._create_graph()
 
-    def _make_map_token_pools(self, dexes: List[Dex]):
+    def _make_map_token_pools(self):
+        assert self.dexes
         result: Dict[Token, List[Any]] = {token: [] for token in Tokens}
-        for dex in dexes:
+        for dex in self.dexes:
             for pool in dex.pools:
                 for ptk in pool.tokens:
                     result[ptk.token].append((pool.name, ptk.weight))
                     result[ptk.token].sort(key=lambda t: t[1], reverse=True)
 
         self.map_token_pools = result
+
+    def _make_map_name_pool(self):
+        assert self.dexes
+        result: Dict[str, Pool] = {}
+        for dex in self.dexes:
+            for pool in dex.pools:
+                result.update({pool.name: pool})
+
+        self.map_name_pools = result
 
     def _create_graph(self):
         assert self.dexes
@@ -59,7 +73,7 @@ class SmartOrderRouter:
 
         self.token_graph = result, edges
 
-    def find_paths(
+    def find_edges(
         self,
         token_in: Token,
         token_out: Token,
@@ -108,6 +122,12 @@ class SmartOrderRouter:
         result: List[List[Token]] = []
         trace(token_in, paths=result, hop_limit=4)
         return result
+
+    def find_routes(self, edge: List[Token]) -> List[SwapRoute]:
+        if not edge:
+            return []
+
+        return []
 
     def find_best_price_out(
         self, token_in: Token, amount_in: int, token_out: Token

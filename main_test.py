@@ -88,8 +88,12 @@ class AlgoTest(TestCase):
         pprint(edge_map, indent=4, width=2)
         print(edges)
 
-        result = self.sor.find_paths("TOMO", "ETH")
-        print("\n-------- SWAPPING ROUTES \n", result)
+        edges = self.sor.find_edges("TOMO", "ETH")
+        print("\n-------- SWAPPING ROUTES \n", edges)
+
+        for edge in edges:
+            routes = self.sor.find_routes(edge)
+            print("\n----- Routes", routes)
 
 
 if __name__ == "__main__":

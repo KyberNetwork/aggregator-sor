@@ -193,3 +193,7 @@ class SwapPath(BaseModel):
 
 class SwapRoute(BaseModel):
     paths: List[SwapPath]
+    amount_in: float
+    amount_out: float
+    token_in: Token
+    token_out: Token

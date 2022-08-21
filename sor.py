@@ -125,7 +125,9 @@ class SmartOrderRouter:
         return result
 
     def find_routes_per_path(
-        self, edge: List[Token], amount_in: Optional[float] = None
+        self,
+        edge: List[Token],
+        amount_in: float,
     ) -> SwapRoute:
         result: List[SwapPath] = []
 
@@ -158,7 +160,15 @@ class SmartOrderRouter:
 
             result.append(best_swap_path)
 
-        return SwapRoute(paths=result)
+        last_swap = result[-1]
+
+        return SwapRoute(
+            paths=result,
+            token_in=edge[0],
+            token_out=edge[-1],
+            amount_in=amount_in,
+            amount_out=last_swap.amount_out,
+        )
 
     def find_best_price_out(
         self, token_in: Token, amount_in: int, token_out: Token

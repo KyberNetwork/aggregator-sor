@@ -167,10 +167,28 @@ class Dex(BaseModel):
 
 
 class SwapPath(BaseModel):
-    amount_in: float
     token_in: Token
     token_out: Token
     pool: Pool
+    amount_in: Optional[float]
+
+    def __repr__(self):
+        token_input = f"{self.token_in}({self.amount_in})"
+        token_output = f"{self.token_out}({self.amount_out})"
+        pool = f"({self.pool.name})"
+        return "--".join([token_input, pool, token_output])
+
+    @property
+    def amount_out(self) -> float:
+        if not self.amount_in:
+            return 0
+
+        swap_result = self.pool.swap(
+            self.token_in,
+            self.amount_in,
+            self.token_out,
+        )
+        return round(swap_result[1], 3)
 
 
 class SwapRoute(BaseModel):

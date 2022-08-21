@@ -7,6 +7,7 @@ from typing import Tuple
 
 from main import Dex
 from main import Pool
+from main import SwapPath
 from main import SwapRoute
 from main import Token
 from main import Tokens
@@ -73,7 +74,7 @@ class SmartOrderRouter:
 
         self.token_graph = result, edges
 
-    def find_edges(
+    def find_routes(
         self,
         token_in: Token,
         token_out: Token,
@@ -123,11 +124,41 @@ class SmartOrderRouter:
         trace(token_in, paths=result, hop_limit=4)
         return result
 
-    def find_routes(self, edge: List[Token]) -> List[SwapRoute]:
-        if not edge:
-            return []
+    def find_routes_per_path(
+        self, edge: List[Token], amount_in: Optional[float] = None
+    ) -> SwapRoute:
+        result: List[SwapPath] = []
 
-        return []
+        if not edge:
+            return SwapRoute(paths=[])
+
+        current_amount_in = amount_in
+
+        for i in range(len(edge) - 1):
+            from_tk, to_tk = edge[i], edge[i + 1]
+            pools = self.token_graph[0][from_tk][to_tk]
+            paths_per_edge: List[SwapPath] = []
+
+            for pool in pools:
+                swap_path = SwapPath(
+                    pool=self.map_name_pools[pool],
+                    token_in=from_tk,
+                    token_out=to_tk,
+                    amount_in=current_amount_in,
+                )
+                paths_per_edge.append(swap_path)
+
+            best_swap_path = paths_per_edge[0]
+
+            for path in paths_per_edge:
+                if path.amount_out > best_swap_path.amount_out:
+                    best_swap_path = path
+
+            current_amount_in = best_swap_path.amount_out
+
+            result.append(best_swap_path)
+
+        return SwapRoute(paths=result)
 
     def find_best_price_out(
         self, token_in: Token, amount_in: int, token_out: Token

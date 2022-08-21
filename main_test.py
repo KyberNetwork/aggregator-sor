@@ -1,10 +1,12 @@
 from pprint import pprint
+from typing import List
 from unittest import main
 from unittest import TestCase
 
 from main import Dex
 from main import Pool
 from main import PoolToken
+from main import SwapRoute
 from sor import SmartOrderRouter
 
 
@@ -88,13 +90,39 @@ class AlgoTest(TestCase):
         pprint(edge_map, indent=4, width=2)
         print(edges)
 
-        routes = self.sor.find_routes("TOMO", "ETH")
-        print("\n-------- SWAPPING ROUTES TOMO->ETH")
+        routes = self.sor.find_routes("TOMO", "ETH", hop_limit=3)
+        print("\n-------- SWAPPING ROUTES TOMO->ETH", routes)
+
+        swap_routes: List[SwapRoute] = []
+
+        test_amount_in = 50
 
         for route in routes:
             print(route)
-            routes_per_path = self.sor.find_routes_per_path(route, 10)
-            print(routes_per_path, "\n")
+            swap_route = self.sor.find_routes_per_path(route, test_amount_in)
+            print(swap_route)
+            swap_routes.append(swap_route)
+
+        swap_routes.sort(key=lambda sr: sr.amount_out, reverse=True)
+
+        print("\n--------------- SPLITTING ROUTES")
+        max_amount, divides = self.sor.split_routes(
+            swap_routes,
+            optimal_level=5,
+        )
+        print("-MaxAmount:", max_amount, "\n-Splits", divides)
+
+        # testing splits
+        out = 0
+        for nth, divide in enumerate(divides):
+            swap_routes[nth].update_amount_in(divide)
+            out += swap_routes[nth].amount_out
+
+        out = round(out, 5)
+        swap_routes[0].update_amount_in(test_amount_in)
+        print(max_amount, out, swap_routes[0].amount_out)
+        assert max_amount == out
+        assert out > swap_routes[0].amount_out
 
 
 if __name__ == "__main__":

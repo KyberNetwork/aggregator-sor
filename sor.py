@@ -78,6 +78,7 @@ class SmartOrderRouter:
         self,
         token_in: Token,
         token_out: Token,
+        hop_limit=4,
     ) -> List[List[Token]]:
         if token_in not in self.map_token_pools:
             return []
@@ -91,8 +92,8 @@ class SmartOrderRouter:
             token: Token,
             paths: List[List[Token]],
             queue=None,
-            hop_limit=None,
         ):
+            nonlocal hop_limit
             if not queue:
                 queue = []
 
@@ -114,14 +115,13 @@ class SmartOrderRouter:
                     node,
                     paths,
                     queue=queue,
-                    hop_limit=hop_limit,
                 )
 
                 while queue[-1] != token:
                     queue.pop()
 
         result: List[List[Token]] = []
-        trace(token_in, paths=result, hop_limit=4)
+        trace(token_in, paths=result)
         return result
 
     def find_routes_per_path(
@@ -169,6 +169,59 @@ class SmartOrderRouter:
             amount_in=amount_in,
             amount_out=last_swap.amount_out,
         )
+
+    def split_routes(
+        self, routes: List[SwapRoute], optimal_level=10
+    ) -> Tuple[float, List[float]]:
+        if not routes:
+            return 0, []
+
+        amount_in = routes[0].amount_in
+
+        for r in routes:
+            assert r.amount_in == amount_in
+
+        max_out, divides = 0, []
+
+        def testing(total_in: float, nth=0, stack=None, total=None):
+            nonlocal max_out, divides, optimal_level
+            if not total:
+                total = 0
+
+            if not stack:
+                stack = []
+
+            if nth == len(routes) - 1:
+                stack.append(total_in)
+                current_route = routes[nth]
+                current_route.update_amount_in(total_in)
+                total += current_route.amount_out
+                # print(stack, total)
+
+                if total > max_out:
+                    max_out = total
+                    divides = stack.copy()
+
+                stack.pop()
+                total -= current_route.amount_out
+                return 0
+
+            for percent in range(optimal_level):
+                current_in = total_in * percent / optimal_level
+                remain_in = total_in - current_in
+                stack.append(current_in)
+
+                current_route = routes[nth]
+                current_route.update_amount_in(current_in)
+                total += current_route.amount_out
+                testing(remain_in, nth=nth + 1, stack=stack, total=total)
+
+                stack.pop()
+                total -= current_route.amount_out
+
+        testing(amount_in)
+        assert sum(divides) == amount_in
+        return round(max_out, 5), divides
 
     def find_best_price_out(
         self, token_in: Token, amount_in: int, token_out: Token

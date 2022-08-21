@@ -91,26 +91,30 @@ class AlgoTest(TestCase):
         print(edges)
 
         routes = self.sor.find_routes("TOMO", "ETH", hop_limit=3)
-        print("\n-------- SWAPPING ROUTES TOMO->ETH", routes)
+        print("\n-------- SWAPPING ROUTES TOMO->ETH\n", routes)
 
         swap_routes: List[SwapRoute] = []
 
         test_amount_in = 50
 
         for route in routes:
-            print(route)
             swap_route = self.sor.find_routes_per_path(route, test_amount_in)
-            print(swap_route)
             swap_routes.append(swap_route)
 
         swap_routes.sort(key=lambda sr: sr.amount_out, reverse=True)
 
-        print("\n--------------- SPLITTING ROUTES")
+        print("** Swap-Routes, sorted by amount_out")
+        for route in swap_routes:
+            print(route)
+
+        optimal_level = 5
+        print("\n--------------- SPLITTING ROUTES", end="  ")
+        print(f"(optimal_level={optimal_level})")
         max_amount, divides = self.sor.split_routes(
             swap_routes,
-            optimal_level=5,
+            optimal_level=optimal_level,
         )
-        print("-MaxAmount:", max_amount, "\n-Splits", divides)
+        print("-MaxAmount:", max_amount, "\n-Splits", divides, "\n")
 
         # testing splits
         out = 0

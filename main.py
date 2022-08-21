@@ -197,3 +197,10 @@ class SwapRoute(BaseModel):
     amount_out: float
     token_in: Token
     token_out: Token
+
+    def update_amount_in(self, new_amount_in: float):
+        self.amount_in = self.amount_out = new_amount_in
+
+        for path in self.paths:
+            path.amount_in = self.amount_out
+            self.amount_out = path.amount_out

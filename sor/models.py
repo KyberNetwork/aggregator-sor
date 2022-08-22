@@ -5,7 +5,6 @@ from typing import List
 from typing import Literal
 from typing import Optional
 from typing import Set
-from typing import Tuple
 
 from pydantic import BaseModel
 
@@ -80,9 +79,6 @@ class PoolToken(BaseModel):
         price = TokenUnitPrices[self.token]
         return price * self.amount
 
-    def update_amount(self, amount_change: float):
-        self.amount += amount_change
-
 
 class Pool(BaseModel):
     """Swap calculation based on Constant product market maker (x*y=k)"""
@@ -115,7 +111,7 @@ class Pool(BaseModel):
         for tk in self.tokens:
             tk.weight = tk.reserve / self.tvl
 
-    def has_token(self, token: Token) -> Optional[PoolToken]:
+    def get_token(self, token: Token) -> Optional[PoolToken]:
         return next((t for t in self.tokens if t.token == token), None)
 
     def swap(
@@ -124,34 +120,34 @@ class Pool(BaseModel):
         amount_in: float,
         token_out: Token,
         do_swap=False,
-    ) -> Tuple[float, float]:
+    ) -> float:
         """Return amount-in and amount-out"""
         if not self.k:
-            return 0, 0
+            return 0
 
         if token_in == token_out:
-            return 0, 0
+            return 0
 
-        pool_token_in = self.has_token(token_in)
-        pool_token_out = self.has_token(token_out)
+        pool_token_in = self.get_token(token_in)
+        pool_token_out = self.get_token(token_out)
 
         if not pool_token_in or not pool_token_out:
-            return 0, 0
+            return 0
 
         amount_in_after_fee = amount_in * (1 - self.fee)
         x, y = pool_token_in.reserve, pool_token_out.reserve
         delta_x = calc_value(token_in, amount_in_after_fee)
         delta_y = amm_swap(delta_x, x, y)
-        delta_amount = price_to_amount(token_out, delta_y)
+        amount_out = price_to_amount(token_out, delta_y)
 
         if do_swap:
-            pool_token_in.update_amount(amount_in)
-            pool_token_out.update_amount(-delta_amount)
+            pool_token_in.amount += amount_in
+            pool_token_out.amount -= amount_out
             self._update_tvl()
             self._update_k()
             self._set_token_weights()
 
-        return amount_in, delta_amount
+        return round(amount_out, 5)
 
 
 class Dex(BaseModel):
@@ -183,24 +179,8 @@ class SwapPath(BaseModel):
         if not self.amount_in:
             return 0
 
-        swap_result = self.pool.swap(
+        return self.pool.swap(
             self.token_in,
             self.amount_in,
             self.token_out,
         )
-        return round(swap_result[1], 3)
-
-
-class SwapRoute(BaseModel):
-    paths: List[SwapPath]
-    amount_in: float
-    amount_out: float
-    token_in: Token
-    token_out: Token
-
-    def update_amount_in(self, new_amount_in: float):
-        self.amount_in = self.amount_out = new_amount_in
-
-        for path in self.paths:
-            path.amount_in = self.amount_out
-            self.amount_out = path.amount_out

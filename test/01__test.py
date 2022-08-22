@@ -1,12 +1,8 @@
-from pprint import pprint
-from typing import List
-from unittest import main
 from unittest import TestCase
 
-from main import Dex
-from main import Pool
-from main import PoolToken
-from main import SwapRoute
+from sor import Dex
+from sor import Pool
+from sor import PoolToken
 from sor import SmartOrderRouter
 
 
@@ -28,7 +24,7 @@ class AlgoTest(TestCase):
         assert pool.k == tokens[0].reserve * tokens[1].reserve == 2_500_000_000
 
         # Test invalid swaps (either token not found in pool)
-        expect = (0, 0)
+        expect = 0
         invalid_swap = pool.swap("USDT", 1, "ETH")
         assert invalid_swap == expect
         invalid_swap = pool.swap("ETH", 1, "USDT")
@@ -39,11 +35,11 @@ class AlgoTest(TestCase):
         assert invalid_swap == expect
 
         # Test valid swap
-        expect = (7000, 6086.421921658177)
+        expect = 6086.42192
         result = pool.swap("USDT", 7000, "USDC")
         assert expect == result
 
-        expect = (7, 6.929039635106574)
+        expect = 6.92904
         result = pool.swap("USDT", 7, "USDC")
         assert expect == result
 
@@ -82,66 +78,3 @@ class AlgoTest(TestCase):
         kyberswap = Dex(name="Kyberswap", pools=[pool5], gas=0.3)
 
         self.sor.dexes = [uniswap, metaswap, luaswap, vuswap, kyberswap]
-        # print(self.sor.map_token_pools)
-
-        self.sor.find_best_price_out("ETH", 2, "BTC")
-
-        edge_map, edges = self.sor.token_graph
-        pprint(edge_map, indent=4, width=2)
-        breakpoint()
-
-        routes = self.sor.find_routes("TOMO", "ETH", hop_limit=4)
-        print("\n-------- SWAPPING ROUTES TOMO->ETH")
-        [print(r) for r in routes]
-        breakpoint()
-
-        swap_routes: List[SwapRoute] = []
-
-        test_amount_in = 50
-
-        for route in routes:
-            swap_route = self.sor.find_routes_per_path(route, test_amount_in)
-            swap_routes.append(swap_route)
-
-        swap_routes.sort(key=lambda sr: sr.amount_out, reverse=True)
-
-        print("** Swap-Routes, sorted by amount_out")
-        max_out = 0
-        for route in swap_routes:
-            print(route)
-
-            if route.amount_out > max_out:
-                max_out = route.amount_out
-
-            breakpoint()
-
-        print("single-route max-amount-out ->", max_out)
-        breakpoint()
-
-        optimal_level = 5
-        print("\n--------------- SPLITTING ROUTES", end="  ")
-        print(f"(optimal_level={optimal_level}), (amount_in={test_amount_in})")
-        max_amount, divides = self.sor.split_routes(
-            swap_routes,
-            optimal_level=optimal_level,
-            amount_in=test_amount_in,
-        )
-        print("\n-MaxAmount:", max_amount, "\n-Splits", divides, "\n")
-
-        # testing splits
-        out = 0
-        for nth, divide in enumerate(divides):
-            swap_routes[nth].update_amount_in(divide)
-            out += swap_routes[nth].amount_out
-
-        out = round(out, 5)
-        swap_routes[0].update_amount_in(test_amount_in)
-        assert max_amount == out
-        assert out > swap_routes[0].amount_out
-
-
-if __name__ == "__main__":
-    try:
-        main(verbosity=2)
-    except Exception:
-        pass

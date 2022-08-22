@@ -6,10 +6,10 @@ from typing import List
 
 from faker import Faker
 
-from main import Dex
-from main import Pool
-from main import PoolToken
-from main import Tokens
+from sor import Dex
+from sor import Pool
+from sor import PoolToken
+from sor import Tokens
 
 fake = Faker()
 

@@ -171,15 +171,13 @@ class SmartOrderRouter:
         )
 
     def split_routes(
-        self, routes: List[SwapRoute], optimal_level=10
+        self, routes: List[SwapRoute], optimal_level=10, amount_in=None
     ) -> Tuple[float, List[float]]:
-        if not routes:
+        if not amount_in:
             return 0, []
 
-        amount_in = routes[0].amount_in
-
-        for r in routes:
-            assert r.amount_in == amount_in
+        if not routes:
+            return 0, []
 
         max_out, divides = 0, []
 
@@ -196,7 +194,7 @@ class SmartOrderRouter:
                 current_route = routes[nth]
                 current_route.update_amount_in(total_in)
                 total += current_route.amount_out
-                # print(stack, total)
+                print(stack, total)
 
                 if total > max_out:
                     max_out = total

@@ -82,16 +82,18 @@ class AlgoTest(TestCase):
         kyberswap = Dex(name="Kyberswap", pools=[pool5], gas=0.3)
 
         self.sor.dexes = [uniswap, metaswap, luaswap, vuswap, kyberswap]
-        print(self.sor.map_token_pools)
+        # print(self.sor.map_token_pools)
 
         self.sor.find_best_price_out("ETH", 2, "BTC")
 
         edge_map, edges = self.sor.token_graph
         pprint(edge_map, indent=4, width=2)
-        print(edges)
+        breakpoint()
 
-        routes = self.sor.find_routes("TOMO", "ETH", hop_limit=3)
-        print("\n-------- SWAPPING ROUTES TOMO->ETH\n", routes)
+        routes = self.sor.find_routes("TOMO", "ETH", hop_limit=4)
+        print("\n-------- SWAPPING ROUTES TOMO->ETH")
+        [print(r) for r in routes]
+        breakpoint()
 
         swap_routes: List[SwapRoute] = []
 
@@ -104,17 +106,27 @@ class AlgoTest(TestCase):
         swap_routes.sort(key=lambda sr: sr.amount_out, reverse=True)
 
         print("** Swap-Routes, sorted by amount_out")
+        max_out = 0
         for route in swap_routes:
             print(route)
 
+            if route.amount_out > max_out:
+                max_out = route.amount_out
+
+            breakpoint()
+
+        print("single-route max-amount-out ->", max_out)
+        breakpoint()
+
         optimal_level = 5
         print("\n--------------- SPLITTING ROUTES", end="  ")
-        print(f"(optimal_level={optimal_level})")
+        print(f"(optimal_level={optimal_level}), (amount_in={test_amount_in})")
         max_amount, divides = self.sor.split_routes(
             swap_routes,
             optimal_level=optimal_level,
+            amount_in=test_amount_in,
         )
-        print("-MaxAmount:", max_amount, "\n-Splits", divides, "\n")
+        print("\n-MaxAmount:", max_amount, "\n-Splits", divides, "\n")
 
         # testing splits
         out = 0
@@ -124,7 +136,6 @@ class AlgoTest(TestCase):
 
         out = round(out, 5)
         swap_routes[0].update_amount_in(test_amount_in)
-        print(max_amount, out, swap_routes[0].amount_out)
         assert max_amount == out
         assert out > swap_routes[0].amount_out
 

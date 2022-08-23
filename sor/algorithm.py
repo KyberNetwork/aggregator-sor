@@ -6,6 +6,7 @@ from typing import Optional
 from .models import Dex
 from .models import Edge
 from .models import Pool
+from .models import SwapEdge
 from .models import Token
 from .preprocess import TokenPairsPools
 
@@ -107,9 +108,44 @@ def batch_split(
             split_head = round(current_batch_size * i / optimal_lv, 5)
             split_remain = round(current_batch_size - split_head, 5)
             queue.append(split_head)
+            # FIXME: edge-cases
+            # 1/ when no more amount to distribute
+            # 2/ duplicated distributions
             split(split_remain, batch_idx=batch_idx + 1, queue=queue)
             queue.pop()
 
     split(batch_size)
 
     return result if not callback else None
+
+
+def swap_edge_amount_out(swap_edge: SwapEdge, amount_in: float, optimal_lv=5):
+    pools = swap_edge.sort_pools(amount_in)
+    max_out = 0
+    optimal_splits = []
+    pool_order = [pool.name for pool in pools]
+
+    def test_amount(splits: Splits):
+        nonlocal max_out, optimal_splits, pool_order
+        result = 0
+
+        for idx, part in enumerate(splits):
+            result += pools[idx].swap(
+                swap_edge.token_in,
+                part,
+                swap_edge.token_out,
+            )
+
+        print(result, splits)
+        if result > max_out:
+            max_out = result
+            optimal_splits = [s / amount_in * 100 for s in splits]
+
+    batch_split(
+        amount_in,
+        len(pools),
+        optimal_lv=optimal_lv,
+        callback=test_amount,
+    )
+
+    return max_out, optimal_splits, pool_order

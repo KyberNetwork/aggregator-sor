@@ -189,11 +189,19 @@ class SwapPath(BaseModel):
 class SwapEdge(BaseModel):
     token_in: Token
     token_out: Token
-    pools: Set[Pool]
-    amount_in: float
+    pools: List[Pool]
 
-    def optimize_amount_out(self):
-        pass
+    def sort_pools(self, amount_in: float):
+        def simulate_swap(pool: Pool):
+            return pool.swap(
+                self.token_in,
+                amount_in,
+                self.token_out,
+            )
+
+        pools = list(self.pools)
+        pools.sort(key=simulate_swap, reverse=True)
+        return pools
 
 
 Route = List[List[SwapPath]]

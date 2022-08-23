@@ -1,14 +1,16 @@
 from pprint import pprint
 from unittest import TestCase
 
+from sor import batch_split
 from sor import determine_token_pair_pools
 from sor import Dex
 from sor import find_edges
 from sor import map_pool_by_name
 from sor import Pool
 from sor import PoolToken
-from sor.algorithm import batch_split
-from sor.algorithm import Splits
+from sor import Splits
+from sor import SwapEdge
+from sor.algorithm import swap_edge_amount_out
 
 
 class PreprocessTest(TestCase):
@@ -71,10 +73,10 @@ class PreprocessTest(TestCase):
 
         print("\n\n", batch_split(10, 2, optimal_lv=10))
 
-        tk12 = PoolToken(token="BTC", amount=30)
+        tk12 = PoolToken(token="BTC", amount=40)
         tk13 = PoolToken(token="ETH", amount=30)
         pool6 = Pool("p6", 0.01, [tk12, tk13])
-        test_pools, max_out, optimal_splits = [pool1, pool2, pool6], 0, None
+        test_pools, max_out, optimal_splits = [pool1, pool6, pool2], 0, None
 
         def test_amount(splits: Splits):
             nonlocal test_pools, max_out, optimal_splits
@@ -83,7 +85,6 @@ class PreprocessTest(TestCase):
             for idx, part in enumerate(splits):
                 result += test_pools[idx].swap("BTC", part, "ETH")
 
-            # print(splits, "------->", result)
             if result > max_out:
                 max_out = result
                 optimal_splits = splits
@@ -91,5 +92,15 @@ class PreprocessTest(TestCase):
         batch_split(100, len(test_pools), callback=test_amount)
         print("======= RESULT", max_out, optimal_splits)
         print("\n**********************************\n")
-        batch_split(100, len(test_pools), callback=test_amount, optimal_lv=30)
+        batch_split(100, len(test_pools), callback=test_amount, optimal_lv=10)
         print("======= RESULT", max_out, optimal_splits)
+        print("\n**********************************\n")
+
+        swap_edge = SwapEdge(token_in="BTC", token_out="ETH", pools=test_pools)
+        max_out, split_percents, pool_names = swap_edge_amount_out(
+            swap_edge,
+            100,
+            optimal_lv=3,
+        )
+
+        print("======= SWAP_EDGE", max_out, "__", split_percents, pool_names)

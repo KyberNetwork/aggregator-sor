@@ -8,6 +8,7 @@ from sor import map_pool_by_name
 from sor import Pool
 from sor import PoolToken
 from sor.algorithm import batch_split
+from sor.algorithm import Splits
 
 
 class PreprocessTest(TestCase):
@@ -69,3 +70,25 @@ class PreprocessTest(TestCase):
         print(edges)
 
         print("\n\n", batch_split(10, 2, optimal_lv=10))
+
+        test_pools, max_out = [pool1, pool2], 0
+
+        def test_amount(splits: Splits):
+            nonlocal test_pools, max_out
+            result = 0
+
+            for idx, part in enumerate(splits):
+                result += test_pools[idx].swap("BTC", part, "ETH")
+
+            print(splits, "------->", result)
+            if result > max_out:
+                max_out = result
+
+        batch_split(1000, len(test_pools), callback=test_amount)
+        print("======= RESULT", max_out)
+        print("\n**********************************\n")
+        batch_split(1000, len(test_pools), callback=test_amount, optimal_lv=20)
+        print("======= RESULT", max_out)
+        print("\n**********************************\n")
+        batch_split(1000, len(test_pools), callback=test_amount, optimal_lv=40)
+        print("======= RESULT", max_out)

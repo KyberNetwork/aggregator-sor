@@ -71,24 +71,25 @@ class PreprocessTest(TestCase):
 
         print("\n\n", batch_split(10, 2, optimal_lv=10))
 
-        test_pools, max_out = [pool1, pool2], 0
+        tk12 = PoolToken(token="BTC", amount=30)
+        tk13 = PoolToken(token="ETH", amount=30)
+        pool6 = Pool("p6", 0.01, [tk12, tk13])
+        test_pools, max_out, optimal_splits = [pool1, pool2, pool6], 0, None
 
         def test_amount(splits: Splits):
-            nonlocal test_pools, max_out
+            nonlocal test_pools, max_out, optimal_splits
             result = 0
 
             for idx, part in enumerate(splits):
                 result += test_pools[idx].swap("BTC", part, "ETH")
 
-            print(splits, "------->", result)
+            # print(splits, "------->", result)
             if result > max_out:
                 max_out = result
+                optimal_splits = splits
 
-        batch_split(1000, len(test_pools), callback=test_amount)
-        print("======= RESULT", max_out)
+        batch_split(100, len(test_pools), callback=test_amount)
+        print("======= RESULT", max_out, optimal_splits)
         print("\n**********************************\n")
-        batch_split(1000, len(test_pools), callback=test_amount, optimal_lv=20)
-        print("======= RESULT", max_out)
-        print("\n**********************************\n")
-        batch_split(1000, len(test_pools), callback=test_amount, optimal_lv=40)
-        print("======= RESULT", max_out)
+        batch_split(100, len(test_pools), callback=test_amount, optimal_lv=30)
+        print("======= RESULT", max_out, optimal_splits)

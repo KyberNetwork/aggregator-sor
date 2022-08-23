@@ -184,3 +184,17 @@ class SwapPath(BaseModel):
             self.amount_in,
             self.token_out,
         )
+
+
+class SwapEdge(BaseModel):
+    token_in: Token
+    token_out: Token
+    pools: Set[Pool]
+    amount_in: float
+
+    def optimize_amount_out(self):
+        pass
+
+
+Route = List[List[SwapPath]]
+Edge = List[Token]

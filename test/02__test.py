@@ -3,9 +3,11 @@ from unittest import TestCase
 
 from sor import determine_token_pair_pools
 from sor import Dex
+from sor import find_edges
 from sor import map_pool_by_name
 from sor import Pool
 from sor import PoolToken
+from sor.algorithm import batch_split
 
 
 class PreprocessTest(TestCase):
@@ -55,3 +57,15 @@ class PreprocessTest(TestCase):
 
         pprint(pool_map, width=-1)
         pprint(token_pairs_pool, width=-1)
+
+        edges = find_edges(
+            dexes,
+            "BTC",
+            "ETH",
+            pool_list,
+            pool_map,
+            token_pairs_pool,
+        )
+        print(edges)
+
+        print("\n\n", batch_split(10, 5, optimal_lv=2))

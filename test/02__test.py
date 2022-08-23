@@ -68,4 +68,4 @@ class PreprocessTest(TestCase):
         )
         print(edges)
 
-        print("\n\n", batch_split(10, 5, optimal_lv=2))
+        print("\n\n", batch_split(10, 2, optimal_lv=10))

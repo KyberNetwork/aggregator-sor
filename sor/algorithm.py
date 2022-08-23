@@ -1,10 +1,11 @@
+from collections.abc import Callable
 from typing import Dict
 from typing import List
+from typing import Optional
 
 from .models import Dex
 from .models import Edge
 from .models import Pool
-from .models import SwapPath
 from .models import Token
 from .preprocess import TokenPairsPools
 
@@ -68,45 +69,47 @@ def find_edges(
     return result
 
 
-def find_routes(edge: Edge, pools: List[Pool]) -> List[List[SwapPath]]:
-    return []
+Splits = List[float]
+BatchSplitCallback = Callable[[Splits], None]
 
 
 def batch_split(
     batch_size: float,
     batch_count: int,
     optimal_lv=5,
-) -> List[List[float]]:
-    result: List[List[float]] = []
+    callback: Optional[BatchSplitCallback] = None,
+) -> Optional[List[Splits]]:
+    result: List[Splits] = []
 
-    def split(current_batch_size: float, batch_idx=0, queue=None):
-        nonlocal batch_count, optimal_lv, result
+    def split(
+        current_batch_size: float,
+        batch_idx=0,
+        queue: Optional[Splits] = None,
+    ):
+        nonlocal batch_count, optimal_lv, result, callback
 
         if not queue:
             queue = []
 
         if len(queue) == batch_count - 1:
             queue.append(current_batch_size)
-            result.append(queue.copy())
+            splits = queue.copy()
+
+            if callback:
+                callback(splits)
+            else:
+                result.append(splits)
+
             queue.pop()
             return
 
-        split_count = batch_count * (optimal_lv - batch_idx) + 1
-
-        for i in range(split_count):
-            split_head = round(current_batch_size * i / split_count, 2)
-            split_remain = round(current_batch_size - split_head, 2)
+        for i in range(optimal_lv + 1):
+            split_head = round(current_batch_size * i / optimal_lv, 5)
+            split_remain = round(current_batch_size - split_head, 5)
             queue.append(split_head)
-
-            if split_remain == 0:
-                while len(queue) < batch_count:
-                    queue.append(0)
-                result.append(queue.copy())
-                while len(queue) > batch_idx + 1:
-                    queue.pop()
-            else:
-                split(split_remain, batch_idx=batch_idx + 1, queue=queue)
+            split(split_remain, batch_idx=batch_idx + 1, queue=queue)
             queue.pop()
 
     split(batch_size)
-    return result
+
+    return result if not callback else None

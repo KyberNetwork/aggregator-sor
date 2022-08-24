@@ -9,6 +9,7 @@ from sor import map_pool_by_name
 from sor import Pool
 from sor import PoolToken
 from sor import Splits
+from sor import swap_edge_amount_out
 from sor import SwapEdge
 
 
@@ -96,6 +97,6 @@ class PreprocessTest(TestCase):
         print("\n**********************************\n")
 
         swap_edge = SwapEdge(token_in="BTC", token_out="ETH", pools=test_pools)
-        calculation = swap_edge.calculate_amout_out(100, optimal_lv=10)
+        calculation = swap_edge_amount_out(swap_edge, 100, optimal_lv=10)
         max_out, split_percents, pool_names = calculation
         print("======= SWAP_EDGE", max_out, "__", split_percents, pool_names)

@@ -1,5 +1,4 @@
 from functools import reduce
-from random import randint
 from typing import Dict
 from typing import List
 from typing import Literal
@@ -35,13 +34,14 @@ Token = Literal["BTC", "ETH", "USDC", "TOMO", "KNC", "SOL", "USDT"]
 Tokens: Set[Token] = {"BTC", "ETH", "USDC", "TOMO", "KNC", "SOL", "USDT"}
 
 
-def set_token_price(token: Token) -> USDPrice:
-    price = 1 if token in {"USDC", "USDT"} else randint(2, 5)
-    return USDPrice(price)
-
-
 TokenUnitPrices: Dict[Token, USDPrice] = {
-    token: set_token_price(token) for token in Tokens
+    "BTC": USDPrice(21_328.08),
+    "ETH": USDPrice(1_630.25),
+    "USDC": USDPrice(1.0),
+    "TOMO": USDPrice(0.522186),
+    "KNC": USDPrice(1.88),
+    "USDT": USDPrice(1.0),
+    "SOL": USDPrice(34.99),
 }
 
 

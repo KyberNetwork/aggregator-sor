@@ -3,12 +3,17 @@ from typing import Dict
 from typing import List
 from typing import Optional
 
+from pydantic import BaseModel
+
 from .models import Dex
-from .models import Edge
 from .models import Pool
-from .models import SwapEdge
 from .models import Token
 from .preprocess import TokenPairsPools
+
+
+Edge = List[Token]
+Splits = List[float]
+BatchSplitCallback = Callable[[Splits], None]
 
 
 def find_edges(
@@ -70,10 +75,6 @@ def find_edges(
     return result
 
 
-Splits = List[float]
-BatchSplitCallback = Callable[[Splits], None]
-
-
 def batch_split(
     batch_size: float,
     batch_count: int,
@@ -119,33 +120,46 @@ def batch_split(
     return result if not callback else None
 
 
-def swap_edge_amount_out(swap_edge: SwapEdge, amount_in: float, optimal_lv=5):
-    pools = swap_edge.sort_pools(amount_in)
-    max_out = 0
-    optimal_splits = []
-    pool_order = [pool.name for pool in pools]
+class SwapEdge(BaseModel):
+    token_in: Token
+    token_out: Token
+    pools: List[Pool]
 
-    def test_amount(splits: Splits):
-        nonlocal max_out, optimal_splits, pool_order
-        result = 0
-
-        for idx, part in enumerate(splits):
-            result += pools[idx].swap(
-                swap_edge.token_in,
-                part,
-                swap_edge.token_out,
+    def sort_pools(self, amount_in: float):
+        def simulate_swap(pool: Pool):
+            return pool.swap(
+                self.token_in,
+                amount_in,
+                self.token_out,
             )
 
-        print(result, splits)
-        if result > max_out:
-            max_out = result
-            optimal_splits = [s / amount_in * 100 for s in splits]
+        self.pools.sort(key=simulate_swap, reverse=True)
 
-    batch_split(
-        amount_in,
-        len(pools),
-        optimal_lv=optimal_lv,
-        callback=test_amount,
-    )
+    def calculate_amout_out(self, amount_in: float, optimal_lv=5):
+        self.sort_pools(amount_in)
+        pool_order = [pool.name for pool in self.pools]
+        max_out, optimal_splits = float(0), []
 
-    return max_out, optimal_splits, pool_order
+        def test_amount(splits: Splits):
+            nonlocal max_out, optimal_splits, pool_order
+            result = float(0)
+
+            for idx, part in enumerate(splits):
+                result += self.pools[idx].swap(
+                    self.token_in,
+                    part,
+                    self.token_out,
+                )
+
+            if result > max_out:
+                max_out = result
+                optimal_splits = [s / amount_in * 100 for s in splits]
+
+        batch_split(
+            amount_in,
+            len(self.pools),
+            optimal_lv=optimal_lv,
+            callback=test_amount,
+        )
+
+        return max_out, optimal_splits, pool_order

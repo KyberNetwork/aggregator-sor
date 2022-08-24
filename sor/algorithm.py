@@ -1,11 +1,9 @@
 from collections.abc import Callable
-from typing import Dict
 from typing import List
 from typing import Optional
 
 from pydantic import BaseModel
 
-from .models import Dex
 from .models import Pool
 from .models import Token
 from .preprocess import TokenPairsPools
@@ -27,11 +25,9 @@ class SwapRoute(BaseModel):
 
 
 def find_edges(
-    dexes: List[Dex],
     token_in: Token,
     token_out: Token,
     pool_list: List[Pool],
-    pool_map: Dict[str, Pool],
     token_pairs_pools: TokenPairsPools,
     max_hop=4,
 ) -> List[Edge]:
@@ -44,13 +40,7 @@ def find_edges(
     if token_in == token_out:
         return []
 
-    if not dexes:
-        return []
-
     if not pool_list:
-        return []
-
-    if not pool_map:
         return []
 
     result = []

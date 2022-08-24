@@ -62,11 +62,9 @@ class PreprocessTest(TestCase):
         pprint(token_pairs_pool, width=-1)
 
         edges = find_edges(
-            dexes,
             "BTC",
             "ETH",
             pool_list,
-            pool_map,
             token_pairs_pool,
         )
         print(edges)

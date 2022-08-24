@@ -2,6 +2,7 @@ from pprint import pprint
 from unittest import TestCase
 
 from sor import batch_split
+from sor import calc_amount_out_on_single_edge
 from sor import determine_token_pair_pools
 from sor import Dex
 from sor import find_edges
@@ -9,7 +10,6 @@ from sor import map_pool_by_name
 from sor import Pool
 from sor import PoolToken
 from sor import Splits
-from sor import swap_edge_amount_out
 from sor import SwapEdge
 
 
@@ -94,7 +94,13 @@ class PreprocessTest(TestCase):
         print("======= RESULT", max_out, optimal_splits)
         print("\n**********************************\n")
 
-        swap_edge = SwapEdge(token_in="BTC", token_out="ETH", pools=test_pools)
-        calculation = swap_edge_amount_out(swap_edge, 100, optimal_lv=10)
-        max_out, split_percents, pool_names = calculation
-        print("======= SWAP_EDGE", max_out, "__", split_percents, pool_names)
+        edge = SwapEdge(token_in="BTC", token_out="ETH", pools=test_pools)
+        result = calc_amount_out_on_single_edge(
+            edge.token_in,
+            edge.token_out,
+            100,
+            edge.pools,
+            optimal_lv=30,
+        )
+        max_out, split_percents, pool_order = result
+        print("======= SWAP_EDGE", max_out, "__", split_percents, pool_order)

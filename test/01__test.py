@@ -2,6 +2,7 @@ from unittest import TestCase
 
 from sor import Pool
 from sor import PoolToken
+from sor.models import PRICE_TABLE
 
 
 class ModelTest(TestCase):
@@ -11,6 +12,7 @@ class ModelTest(TestCase):
         print("********* Testing Models *********************************")
 
     def test_case_0(self):
+        print(PRICE_TABLE.table)
         tokens = [
             PoolToken(token="USDC", amount=50000),
             PoolToken(token="USDT", amount=50000),

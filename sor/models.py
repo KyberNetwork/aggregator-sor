@@ -6,6 +6,7 @@ from typing import Optional
 from typing import Set
 
 from pydantic import BaseModel
+from terminaltables import AsciiTable
 
 
 class USDPrice:
@@ -43,6 +44,10 @@ TokenUnitPrices: Dict[Token, USDPrice] = {
     "USDT": USDPrice(1.0),
     "SOL": USDPrice(34.99),
 }
+
+PRICE_TABLE = AsciiTable(
+    [["Symbol", "Price (USD)"], *[[token, price] for token, price in TokenUnitPrices.items()]]
+)
 
 
 def calc_value(token: Token, amount: float) -> float:

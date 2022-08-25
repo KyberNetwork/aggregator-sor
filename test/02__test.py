@@ -1,19 +1,31 @@
+from os import environ
+from typing import Any
+from typing import List
 from unittest import TestCase
+
+from prompt_toolkit import prompt
+from terminaltables import AsciiTable
 
 from sor import batch_split
 from sor import Pool
 from sor import PoolToken
 from sor import Splits
 
+IS_DEBUG = environ.get("DEBUG") == "1"
+
 
 class AlgoTest(TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         print("------------------------------------------------")
-        print("********* Testing VolumeSplit ******************")
+        print("********* Testing Volume Split ******************")
 
     def setUp(self) -> None:
-        print("")
+        global IS_DEBUG
+        if IS_DEBUG:
+            input()
+        else:
+            print("")
 
     def test_1(self):
         volume = 10
@@ -31,10 +43,8 @@ class AlgoTest(TestCase):
     def test_2(self):
         volume = 10
         count = 0
-        print(
-            f"Partitioning a volume={volume} to multi parts \
-            with Callback & Increased number of partition"
-        )
+        print(f"Partitioning a volume={volume} to multi parts")
+        print("(smaller part's size)")
 
         def callback(splits: Splits):
             nonlocal count
@@ -48,11 +58,8 @@ class AlgoTest(TestCase):
         assert count == 11
 
     def test_3(self):
-        amount_in = 100
-        print(
-            f"Partitioning a swap of {amount_in} BTC->ETH \
-        over list of Pools"
-        )
+        global IS_DEBUG
+
         tk1 = PoolToken(token="BTC", amount=200)
         tk2 = PoolToken(token="ETH", amount=2000)
         pool1 = Pool("pool1", 0.01, [tk1, tk2])
@@ -64,36 +71,67 @@ class AlgoTest(TestCase):
         tk5 = PoolToken(token="BTC", amount=40)
         tk6 = PoolToken(token="ETH", amount=500)
         pool3 = Pool("pool3", 0.01, [tk5, tk6])
-        test_pools, max_out, optimal_splits = [pool1, pool2, pool3], 0, None
 
-        print("+ Swapping without volume split")
-        for pool in test_pools:
-            print(
-                pool.name,
-                f"swap {amount_in} BTC->ETH:",
-                pool.swap("BTC", amount_in, "ETH"),
-            )
+        pools = [pool1, pool2, pool3]
+        pool_names = [p.name for p in pools]
 
-        print("+ Swapping with volume split")
+        table = [
+            ["Token", *pool_names],
+            ["BTC", *[p.tokens[0].amount for p in pools]],
+            ["ETH", *[p.tokens[1].amount for p in pools]],
+        ]
+        print("\nGiven the following pools")
+        print(AsciiTable(table).table)
+
+        amount_in = float(100)
+
+        if IS_DEBUG:
+            try:
+                msg = "\nHow many BTC to swap to ETH? (default=100) "
+                amount_in = float(prompt(msg))
+            except Exception:
+                pass
+
+        print("\n+ Swapping without volume split")
+        table = [
+            ["Amount-In", *[p.name for p in pools]],
+            [amount_in, *[p.swap("BTC", amount_in, "ETH") for p in pools]],
+        ]
+        print(AsciiTable(table).table)
+
+        if IS_DEBUG:
+            input()
+
+        print("\n+ Swapping with volume split")
+        max_out = 0
+        optimal_splits = {p.name: float(0) for p in pools}
 
         def test_amount(splits: Splits):
-            nonlocal test_pools, max_out, optimal_splits
+            nonlocal pools, max_out, optimal_splits
             result = 0
 
             for idx, part in enumerate(splits):
-                result += test_pools[idx].swap("BTC", part, "ETH")
+                result += pools[idx].swap("BTC", part, "ETH")
 
             if result > max_out:
                 max_out = result
-                optimal_splits = splits
+                optimal_splits = {pools[idx].name: split for idx, split in enumerate(splits)}
 
-        pool_names = [p.name for p in test_pools]
+        table: List[List[Any]] = [["Optimal Level", "Amout-Out", *pool_names]]
 
-        batch_split(amount_in, len(test_pools), callback=test_amount)
-        print("=> RESULT (optimal=5):", max_out, optimal_splits, pool_names)
+        def test_optimize(optimal_lv: int):
+            nonlocal amount_in, pools, test_amount, table
+            batch_split(amount_in, len(pools), callback=test_amount, optimal_lv=optimal_lv)
+            split_details = [optimal_splits[p.name] for p in pools]
+            table.append([optimal_lv, max_out, *split_details])
 
-        batch_split(amount_in, len(test_pools), callback=test_amount, optimal_lv=10)
-        print("=> RESULT (optimal=10):", max_out, optimal_splits, pool_names)
+        if not IS_DEBUG:
+            [test_optimize(2**i * 5) for i in range(5)]
+            print(AsciiTable(table).table)
 
-        batch_split(amount_in, len(test_pools), callback=test_amount, optimal_lv=30)
-        print("=> RESULT (optimal=30):", max_out, optimal_splits, pool_names)
+        while IS_DEBUG:
+            try:
+                test_optimize(int(prompt("Optimal level? ")))
+                print(AsciiTable(table).table)
+            except Exception:
+                pass

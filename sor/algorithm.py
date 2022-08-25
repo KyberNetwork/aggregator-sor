@@ -4,14 +4,26 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 
+from pydantic import BaseModel
+
 from .models import Pool
 from .models import Token
 from .preprocess import TokenPairsPools
 
 
-Route = List[Token]
+Path = List[Token]
 Splits = List[float]
 BatchSplitCallback = Callable[[Splits], None]
+
+
+class Edge(BaseModel):
+    token_in: Token
+    token_out: Token
+    pools: List[Pool]
+
+    def __repr__(self):
+        pools = f"({', '.join([p.name for p in self.pools])})"
+        return f"{self.token_in}->{self.token_out} {pools}"
 
 
 def find_paths(
@@ -20,7 +32,7 @@ def find_paths(
     pool_list: List[Pool],
     token_pairs_pools: TokenPairsPools,
     max_hop=4,
-) -> List[Route]:
+) -> List[Path]:
     if token_in not in token_pairs_pools:
         return []
 
@@ -62,6 +74,20 @@ def find_paths(
                 queue.pop()
 
     trace(token_in)
+    return result
+
+
+def path_to_edges(
+    path: Path, token_pairs_pools: TokenPairsPools, pool_map: Dict[str, Pool]
+) -> List[Edge]:
+    result: List[Edge] = []
+
+    for i in range(len(path) - 1):
+        token_in, token_out = path[i], path[i + 1]
+        pool_names = token_pairs_pools[token_in][token_out]
+        pools = [pool_map[name] for name in pool_names]
+        result.append(Edge(token_in=token_in, token_out=token_out, pools=pools))
+
     return result
 
 
@@ -154,7 +180,7 @@ def calc_amount_out_on_single_edge(
 
 
 def calc_amount_out_on_single_route(
-    route: Route,
+    route: Path,
     amount_in: float,
     token_pairs_pools: TokenPairsPools,
     pool_map: Dict[str, Pool],
@@ -188,7 +214,7 @@ def calc_amount_out_on_single_route(
 
 
 def calc_amount_out_on_multi_routes(
-    routes: List[Route],
+    routes: List[Path],
     amount_in: float,
     token_pairs_pools: TokenPairsPools,
     pool_map: Dict[str, Pool],

@@ -1,3 +1,4 @@
+from test.utils import debug
 from typing import List
 from unittest import TestCase
 
@@ -8,6 +9,7 @@ from sor import Dex
 from sor import find_paths
 from sor import Pool
 from sor import PoolToken
+from sor.algorithm import path_to_edges
 from sor.models import Token
 from sor.preprocess import map_pool_by_name
 
@@ -84,7 +86,7 @@ class AlgoTest(TestCase):
 
         dexes = [uniswap, metaswap, luaswap, vuswap, kyberswap]
         token_pairs_pools = determine_token_pair_pools(dexes)
-        pools, _ = map_pool_by_name(dexes)
+        pools, pool_map = map_pool_by_name(dexes)
 
         def get_token_amount(pool: Pool, token: Token):
             pool_token = pool.get_token(token)
@@ -101,7 +103,18 @@ class AlgoTest(TestCase):
         print("\nGiven the following pools")
         print(AsciiTable(table).table)
 
+        debug()
+
         token_in, token_out, max_hop = "BTC", "ETH", 4
-        print(f"\nFind paths from {token_in} to {token_out} with max_hop={max_hop}")
+        print(f"\nPaths from {token_in} to {token_out} with max_hop={max_hop}")
         paths = find_paths(token_in, token_out, pools, token_pairs_pools, max_hop=max_hop)
-        print(paths)
+        print("\n".join(map(str, paths)))
+
+        debug()
+
+        print(f"\nEdges from {token_in} to {token_out} with max_hop={max_hop}")
+
+        for path in paths:
+            joined_path = "->".join(path)
+            edge = path_to_edges(path, token_pairs_pools, pool_map)
+            print(joined_path, "\t", edge)

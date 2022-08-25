@@ -3,7 +3,6 @@ from typing import Any
 from typing import List
 from unittest import TestCase
 
-from prompt_toolkit import prompt
 from terminaltables import AsciiTable
 
 from sor import batch_split
@@ -12,6 +11,16 @@ from sor import PoolToken
 from sor import Splits
 
 IS_DEBUG = environ.get("DEBUG") == "1"
+TABLE: List[List[Any]] = []
+
+
+def println(msg: str):
+    print("\n" + msg)
+
+
+def show_table():
+    global TABLE
+    print(AsciiTable(TABLE).table)
 
 
 class AlgoTest(TestCase):
@@ -21,11 +30,7 @@ class AlgoTest(TestCase):
         print("********* Testing Volume Split ******************")
 
     def setUp(self) -> None:
-        global IS_DEBUG
-        if IS_DEBUG:
-            input()
-        else:
-            print("")
+        print("")
 
     def test_1(self):
         volume = 10
@@ -58,7 +63,7 @@ class AlgoTest(TestCase):
         assert count == 11
 
     def test_3(self):
-        global IS_DEBUG
+        global IS_DEBUG, TABLE
 
         tk1 = PoolToken(token="BTC", amount=200)
         tk2 = PoolToken(token="ETH", amount=2000)
@@ -75,34 +80,23 @@ class AlgoTest(TestCase):
         pools = [pool1, pool2, pool3]
         pool_names = [p.name for p in pools]
 
-        table = [
+        TABLE = [
             ["Token", *pool_names],
             ["BTC", *[p.tokens[0].amount for p in pools]],
             ["ETH", *[p.tokens[1].amount for p in pools]],
         ]
-        print("\nGiven the following pools")
-        print(AsciiTable(table).table)
+        println("Given the following pools")
+        show_table()
 
         amount_in = float(100)
-
-        if IS_DEBUG:
-            try:
-                msg = "\nHow many BTC to swap to ETH? (default=100) "
-                amount_in = float(prompt(msg))
-            except Exception:
-                pass
-
-        print("\n+ Swapping without volume split")
-        table = [
-            ["Amount-In", *[p.name for p in pools]],
+        println(f"+ Swapping {amount_in} BTC->ETH without volume split")
+        TABLE = [
+            ["Amount-In (BTC)", *pool_names],
             [amount_in, *[p.swap("BTC", amount_in, "ETH") for p in pools]],
         ]
-        print(AsciiTable(table).table)
+        show_table()
 
-        if IS_DEBUG:
-            input()
-
-        print("\n+ Swapping with volume split")
+        println(f"+ Swapping {amount_in} BTC->ETH with volume split")
         max_out = 0
         optimal_splits = {p.name: float(0) for p in pools}
 
@@ -117,21 +111,13 @@ class AlgoTest(TestCase):
                 max_out = result
                 optimal_splits = {pools[idx].name: split for idx, split in enumerate(splits)}
 
-        table: List[List[Any]] = [["Optimal Level", "Amout-Out", *pool_names]]
+        TABLE = [["Optimal Level", "Amout-Out (ETH)", *pool_names]]
 
-        def test_optimize(optimal_lv: int):
-            nonlocal amount_in, pools, test_amount, table
+        def optimize_output(optimal_lv: int):
+            nonlocal amount_in, pools, test_amount
             batch_split(amount_in, len(pools), callback=test_amount, optimal_lv=optimal_lv)
             split_details = [optimal_splits[p.name] for p in pools]
-            table.append([optimal_lv, max_out, *split_details])
+            TABLE.append([optimal_lv, max_out, *split_details])
 
-        if not IS_DEBUG:
-            [test_optimize(2**i * 5) for i in range(5)]
-            print(AsciiTable(table).table)
-
-        while IS_DEBUG:
-            try:
-                test_optimize(int(prompt("Optimal level? ")))
-                print(AsciiTable(table).table)
-            except Exception:
-                pass
+        [optimize_output(i) for i in [5, 10, 30, 100]]
+        show_table()

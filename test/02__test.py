@@ -1,4 +1,4 @@
-from os import environ
+from test.utils import debug
 from typing import Any
 from typing import List
 from unittest import TestCase
@@ -10,7 +10,6 @@ from sor import Pool
 from sor import PoolToken
 from sor import Splits
 
-IS_DEBUG = environ.get("DEBUG") == "1"
 TABLE: List[List[Any]] = []
 
 
@@ -30,7 +29,7 @@ class AlgoTest(TestCase):
         print("********* Testing Volume Split ******************")
 
     def setUp(self) -> None:
-        print("")
+        debug()
 
     def test_1(self):
         volume = 10
@@ -88,6 +87,8 @@ class AlgoTest(TestCase):
         println("Given the following pools")
         show_table()
 
+        debug()
+
         amount_in = float(100)
         println(f"+ Swapping {amount_in} BTC->ETH without volume split")
         TABLE = [
@@ -95,6 +96,8 @@ class AlgoTest(TestCase):
             [amount_in, *[p.swap("BTC", amount_in, "ETH") for p in pools]],
         ]
         show_table()
+
+        debug()
 
         println(f"+ Swapping {amount_in} BTC->ETH with volume split")
         max_out = 0
@@ -118,6 +121,7 @@ class AlgoTest(TestCase):
             batch_split(amount_in, len(pools), callback=test_amount, optimal_lv=optimal_lv)
             split_details = [optimal_splits[p.name] for p in pools]
             TABLE.append([optimal_lv, max_out, *split_details])
+            debug(show_table)
 
         [optimize_output(i) for i in [5, 10, 30, 100]]
         show_table()

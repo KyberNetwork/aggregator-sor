@@ -13,6 +13,8 @@ from .preprocess import TokenPairsPools
 
 Path = List[Token]
 Splits = List[float]
+EdgeSplit = Dict[str, float]
+PoolMap = Dict[str, Pool]
 BatchSplitCallback = Callable[[Splits], None]
 
 
@@ -24,6 +26,38 @@ class Edge(BaseModel):
     def __repr__(self):
         pools = f"({', '.join([p.name for p in self.pools])})"
         return f"{self.token_in}->{self.token_out} {pools}"
+
+
+def clone_edges(edges: List[Edge]) -> Tuple[List[Edge], PoolMap]:
+    cloned_edges: List[Edge] = []
+    cloned_pools: PoolMap = {}
+
+    for edge in edges:
+        clone_edge = Edge(
+            token_in=edge.token_in,
+            token_out=edge.token_out,
+            pools=edge.pools,
+        )
+
+        for pool in clone_edge.pools:
+            if pool.name not in cloned_pools:
+                cloned_pools.update({pool.name: pool.clone()})
+
+        cloned_pool_list = [cloned_pools[p.name] for p in clone_edge.pools]
+        clone_edge.pools = cloned_pool_list
+        cloned_edges.append(clone_edge)
+
+    return cloned_edges, cloned_pools
+
+
+def validate_edges_continuity(edges: List[Edge]) -> bool:
+    """A valid path must not be broken"""
+    for i in range(len(edges) - 1):
+        current, next = edges[i], edges[i + 1]
+        if current.token_out != next.token_in:
+            return False
+
+    return True
 
 
 def find_paths(
@@ -148,18 +182,23 @@ def sort_pools(
 
 
 def calc_amount_out_on_single_edge(
-    token_in: Token,
-    token_out: Token,
+    edge: Edge,
     amount_in: float,
-    pools: List[Pool],
     optimal_lv=5,
-) -> Tuple[float, Splits, List[str]]:
+    do_swap=False,
+) -> Tuple[float, EdgeSplit]:
+    """
+    Optimize amount out by splitting volume over pools in parallel
+    This function mutates pool state when required
+    But we only mutate (do_swap=True) only when max_result is found
+    """
+    pools, token_in, token_out = edge.pools, edge.token_in, edge.token_out
     sort_pools(token_in, token_out, amount_in, pools)
-    pool_order = [pool.name for pool in pools]
-    max_out, optimal_splits = float(0), []
+    max_out = float(0)
+    optimal_splits: EdgeSplit = {}
 
-    def test_amount(splits: Splits):
-        nonlocal max_out, optimal_splits, pool_order
+    def try_each_split(splits: Splits):
+        nonlocal max_out, optimal_splits
         result = float(0)
 
         for idx, part in enumerate(splits):
@@ -167,54 +206,60 @@ def calc_amount_out_on_single_edge(
 
         if result > max_out:
             max_out = result
-            optimal_splits = splits
+            optimal_splits = {pools[idx].name: split for idx, split in enumerate(splits)}
 
     batch_split(
         amount_in,
         len(pools),
         optimal_lv=optimal_lv,
-        callback=test_amount,
+        callback=try_each_split,
     )
 
-    return max_out, optimal_splits, pool_order
+    if do_swap:
+        for pool in pools:
+            split_volume = optimal_splits[pool.name]
+            pool.swap(token_in, split_volume, token_out, do_swap=True)
+
+    return max_out, optimal_splits
 
 
-def calc_amount_out_on_single_route(
-    route: Path,
+def calc_amount_out_on_consecutive_edges(
+    edges: List[Edge],
     amount_in: float,
-    token_pairs_pools: TokenPairsPools,
-    pool_map: Dict[str, Pool],
     optimal_lv=5,
-) -> Tuple[float, List[Splits], List[List[str]]]:
-    if amount_in == 0:
-        return 0, [], []
+) -> Tuple[float, List[EdgeSplit], PoolMap]:
+    """
+    Optimizing on running over multi consecutive edges,
+    ie: BTC -> USDC -> ETH
+    When optimization, pool state must persist over iteration
+    Meanwhile, we need to maintain function purity
+    because the edges might be process multiple times independently
+    -> Solution: clone the Edges
+    """
+    # Confirm validity of edges,
+    if not validate_edges_continuity(edges):
+        raise Exception("Broken path:", edges)
 
-    current_amount_in = amount_in
-    split_details: List[Splits] = []
-    pool_details: List[List[str]] = []
+    # Clone Edges, because we want to maintain function's purity
+    cloned_edges, cloned_pools = clone_edges(edges)
+    current_in = amount_in
+    splits: List[EdgeSplit] = []
 
-    for idx, token_in in enumerate(route):
-        if idx == len(route) - 1:
-            break
-
-        token_out = route[idx + 1]
-        pool_names = token_pairs_pools[token_in][token_out]
-
-        if not pool_names:
-            return 0, [], []
-
-        pools = [pool_map[name] for name in pool_names]
-        current_amount_in, splits, pool_order = calc_amount_out_on_single_edge(
-            token_in, token_out, current_amount_in, pools, optimal_lv=optimal_lv
+    for edge in cloned_edges:
+        current_in, split = calc_amount_out_on_single_edge(
+            edge,
+            current_in,
+            optimal_lv=optimal_lv,
+            do_swap=True,
         )
-        split_details.append(splits)
-        pool_details.append(pool_order)
+        splits.append(split)
 
-    return current_amount_in, split_details, pool_details
+    return current_in, splits, cloned_pools
 
 
+# FIXME: fix this function
 def calc_amount_out_on_multi_routes(
-    routes: List[Path],
+    paths: List[Path],
     amount_in: float,
     token_pairs_pools: TokenPairsPools,
     pool_map: Dict[str, Pool],
@@ -223,16 +268,14 @@ def calc_amount_out_on_multi_routes(
     max_out = float(0)
     route_splits: List[float] = []
 
-    def test_amount(splits: Splits):
+    def try_each_split(splits: Splits):
         nonlocal max_out, route_splits
         result = float(0)
 
         for idx, part in enumerate(splits):
-            amount_out, _, _ = calc_amount_out_on_single_route(
-                routes[idx],
+            amount_out, _, _ = calc_amount_out_on_consecutive_edges(
+                path_to_edges(paths[idx], token_pairs_pools, pool_map),
                 part,
-                token_pairs_pools,
-                pool_map,
                 optimal_lv=optimal_lv,
             )
 
@@ -244,9 +287,9 @@ def calc_amount_out_on_multi_routes(
 
     batch_split(
         amount_in,
-        len(routes),
+        len(paths),
         optimal_lv=optimal_lv,
-        callback=test_amount,
+        callback=try_each_split,
     )
 
     return max_out, route_splits

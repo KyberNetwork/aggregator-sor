@@ -6,6 +6,8 @@ from unittest import TestCase
 from terminaltables import AsciiTable
 
 from sor import batch_split
+from sor import calc_amount_out_on_single_edge
+from sor import Edge
 from sor import Pool
 from sor import PoolToken
 from sor import Splits
@@ -100,28 +102,18 @@ class AlgoTest(TestCase):
         debug()
 
         println(f"+ Swapping {amount_in} BTC->ETH with volume split")
-        max_out = 0
-        optimal_splits = {p.name: float(0) for p in pools}
-
-        def test_amount(splits: Splits):
-            nonlocal pools, max_out, optimal_splits
-            result = 0
-
-            for idx, part in enumerate(splits):
-                result += pools[idx].swap("BTC", part, "ETH")
-
-            if result > max_out:
-                max_out = result
-                optimal_splits = {pools[idx].name: split for idx, split in enumerate(splits)}
+        edge = Edge(token_in="BTC", token_out="ETH", pools=pools)
 
         TABLE = [["Optimal Level", "Amout-Out (ETH)", *pool_names]]
 
-        def optimize_output(optimal_lv: int):
-            nonlocal amount_in, pools, test_amount
-            batch_split(amount_in, len(pools), callback=test_amount, optimal_lv=optimal_lv)
+        for optimal_lv in [5, 10, 30, 100]:
+            max_out, optimal_splits = calc_amount_out_on_single_edge(
+                edge,
+                amount_in,
+                optimal_lv=optimal_lv,
+            )
             split_details = [optimal_splits[p.name] for p in pools]
             TABLE.append([optimal_lv, max_out, *split_details])
             debug(show_table)
 
-        [optimize_output(i) for i in [5, 10, 30, 100]]
         show_table()

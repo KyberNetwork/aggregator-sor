@@ -13,41 +13,6 @@ from sor.algorithm import path_to_edges
 from sor.models import Token
 from sor.preprocess import map_pool_by_name
 
-# cycol = cycle("bgrcmk")
-# def plotting_graph(data: TokenPairsPools):
-#     vertices: List[Token] = sorted([k for k, _ in data.items()], key=lambda x: len(x))
-#     points: Dict[Token, List[int]] = {
-#         v: [idx * 2, idx % 3 * 3 - idx % 2 * 20] for idx, v in enumerate(vertices)
-#     }
-
-#     edges = set()
-
-#     for from_token, pairs in data.items():
-#         for to_token in pairs.keys():
-#             edge = "-".join(sorted([from_token, to_token]))
-#             edges.add(edge)
-
-#     for edge in edges:
-#         from_token, to_token = edge.split("-")
-#         from_point, to_point = points[from_token], points[to_token]
-#         x = [from_point[0], to_point[0]]
-#         y = [from_point[1], to_point[1]]
-#         plt.plot(x, y, color="#aaa")
-
-#     for token, values in points.items():
-#         x, y = values
-#         plt.scatter(x, y, marker="o")
-#         plt.text(x - 0.2, y + 0.4, token)
-
-#     ax = plt.gca()
-#     ax.get_xaxis().set_visible(False)
-#     ax.get_yaxis().set_visible(False)
-#     ax.spines["top"].set_visible(False)
-#     ax.spines["right"].set_visible(False)
-#     ax.spines["bottom"].set_visible(False)
-#     ax.spines["left"].set_visible(False)
-#     plt.show()
-
 
 class AlgoTest(TestCase):
     @classmethod

@@ -1,57 +1,34 @@
-""" Creating mock data
-"""
-from random import randint
-from random import sample
-from typing import List
-
-from faker import Faker
-
 from sor import Dex
 from sor import Pool
 from sor import PoolToken
-from sor import Tokens
-
-fake = Faker()
 
 
-def random_swap_fee():
-    return randint(1, 5) / 100
+def mock():
+    tk1 = PoolToken(token="BTC", amount=200)
+    tk2 = PoolToken(token="ETH", amount=2000)
+    pool1 = Pool("pool1", 0.01, [tk1, tk2])
+    uniswap = Dex(name="Uniswap", pools=[pool1], gas=0.2)
 
+    tk3 = PoolToken(token="BTC", amount=80)
+    tk4 = PoolToken(token="ETH", amount=900)
+    pool2 = Pool("pool2", 0.01, [tk3, tk4])
+    metaswap = Dex(name="Metaswap", pools=[pool2], gas=0.4)
 
-def create_pool_tokens(count: int, tokens=None) -> List[PoolToken]:
-    tokens = sample(Tokens, count) if not tokens else tokens
-    return [
-        PoolToken(
-            token=token,
-            amount=randint(10, 100),
-        )
-        for token in tokens
-    ]
+    tk5 = PoolToken(token="USDC", amount=10000)
+    tk6 = PoolToken(token="BTC", amount=11)
+    tk7 = PoolToken(token="KNC", amount=1100)
+    pool3 = Pool("pool3", 0.01, [tk5, tk6, tk7])
+    luaswap = Dex(name="Luaswap", pools=[pool3], gas=0.3)
 
+    tk8 = PoolToken(token="USDC", amount=200)
+    tk9 = PoolToken(token="ETH", amount=110)
+    pool4 = Pool("pool4", 0.01, [tk8, tk9])
+    vuswap = Dex(name="Vuswap", pools=[pool4], gas=0.3)
 
-def create_pool(token_count: int, fee: float, tokens=None) -> Pool:
-    tokens = create_pool_tokens(token_count, tokens=tokens)
-    name = "-".join(fake.words(nb=2))
-    return Pool(name, fee, tokens)
+    tk10 = PoolToken(token="SOL", amount=2000)
+    tk11 = PoolToken(token="ETH", amount=1100)
+    pool5 = Pool("pool5", 0.01, [tk10, tk11])
+    kyberswap = Dex(name="Kyberswap", pools=[pool5], gas=0.3)
 
-
-def create_many_pools(count: int, tokens=None) -> List[Pool]:
-    return [
-        create_pool(
-            randint(2, 4),
-            random_swap_fee(),
-            tokens=tokens,
-        )
-        for _ in range(count)
-    ]
-
-
-def create_dexes(count: int, tokens=None) -> List[Dex]:
-    def create_single_dex():
-        return Dex(
-            pools=create_many_pools(randint(1, 3 * count), tokens=tokens),
-            name="-".join(fake.words(nb=3)),
-            gas=randint(10, 20),
-        )
-
-    return [create_single_dex() for _ in range(count)]
+    dexes = [uniswap, metaswap, luaswap, vuswap, kyberswap]
+    return dexes

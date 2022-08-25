@@ -154,6 +154,10 @@ class Pool(BaseModel):
 
         return round(amount_out, 5)
 
+    def clone(self):
+        cloned_tokens = [PoolToken(**tk.dict()) for tk in self.tokens]
+        return Pool(self.name, self.fee, cloned_tokens)
+
 
 class Dex(BaseModel):
     name: str

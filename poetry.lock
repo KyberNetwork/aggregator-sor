@@ -214,6 +214,18 @@ docs = ["furo (>=2021.7.5b38)", "proselint (>=0.10.2)", "sphinx-autodoc-typehint
 test = ["appdirs (==1.4.4)", "pytest-cov (>=2.7)", "pytest-mock (>=3.6)", "pytest (>=6)"]
 
 [[package]]
+name = "plotext"
+version = "5.0.2"
+description = "plotext plots directly on terminal"
+category = "main"
+optional = false
+python-versions = ">=3.5"
+
+[package.extras]
+image = ["pillow (>=8.4)"]
+video = ["ffpyplayer (>=4.3.5)", "opencv-python (>=4.5.5)", "pafy (>=0.5.5)", "pillow (>=8.4)"]
+
+[[package]]
 name = "pre-commit"
 version = "2.20.0"
 description = "A framework for managing and maintaining multi-language pre-commit hooks."
@@ -369,7 +381,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "9bfa02b04d5d75d61bf134018a69be3e1a5099a3f3181fc27e9bd2a8eb9d3d33"
+content-hash = "f1ebf1f32e0f74eec197d72458798c77b23d1ce0928d76c63ee4ebb0d6bf6e79"
 
 [metadata.files]
 black = [
@@ -649,6 +661,10 @@ pillow = [
 platformdirs = [
     {file = "platformdirs-2.5.2-py3-none-any.whl", hash = "sha256:027d8e83a2d7de06bbac4e5ef7e023c02b863d7ea5d079477e722bb41ab25788"},
     {file = "platformdirs-2.5.2.tar.gz", hash = "sha256:58c8abb07dcb441e6ee4b11d8df0ac856038f944ab98b7be6b27b2a3c7feef19"},
+]
+plotext = [
+    {file = "plotext-5.0.2-py3-none-any.whl", hash = "sha256:04facb1dd01693f95a08d6aed845c250728b04c6ef08b805546164a57fa16386"},
+    {file = "plotext-5.0.2.tar.gz", hash = "sha256:e1ece29999f241dcc2806a55331265659bcbe8cbd896743067b941f97a8348dc"},
 ]
 pre-commit = [
     {file = "pre_commit-2.20.0-py2.py3-none-any.whl", hash = "sha256:51a5ba7c480ae8072ecdb6933df22d2f812dc897d5fe848778116129a681aac7"},

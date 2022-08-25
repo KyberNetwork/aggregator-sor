@@ -1,36 +1,26 @@
 from collections.abc import Callable
+from typing import Dict
 from typing import List
 from typing import Optional
-
-from pydantic import BaseModel
+from typing import Tuple
 
 from .models import Pool
 from .models import Token
 from .preprocess import TokenPairsPools
 
 
-Edge = List[Token]
+Route = List[Token]
 Splits = List[float]
 BatchSplitCallback = Callable[[Splits], None]
 
 
-class SwapEdge(BaseModel):
-    token_in: Token
-    token_out: Token
-    pools: List[Pool]
-
-
-class SwapRoute(BaseModel):
-    edges: List[SwapEdge]
-
-
-def find_edges(
+def find_paths(
     token_in: Token,
     token_out: Token,
     pool_list: List[Pool],
     token_pairs_pools: TokenPairsPools,
     max_hop=4,
-) -> List[Edge]:
+) -> List[Route]:
     if token_in not in token_pairs_pools:
         return []
 
@@ -137,7 +127,7 @@ def calc_amount_out_on_single_edge(
     amount_in: float,
     pools: List[Pool],
     optimal_lv=5,
-):
+) -> Tuple[float, Splits, List[str]]:
     sort_pools(token_in, token_out, amount_in, pools)
     pool_order = [pool.name for pool in pools]
     max_out, optimal_splits = float(0), []
@@ -151,7 +141,7 @@ def calc_amount_out_on_single_edge(
 
         if result > max_out:
             max_out = result
-            optimal_splits = [s / amount_in * 100 for s in splits]
+            optimal_splits = splits
 
     batch_split(
         amount_in,
@@ -161,3 +151,76 @@ def calc_amount_out_on_single_edge(
     )
 
     return max_out, optimal_splits, pool_order
+
+
+def calc_amount_out_on_single_route(
+    route: Route,
+    amount_in: float,
+    token_pairs_pools: TokenPairsPools,
+    pool_map: Dict[str, Pool],
+    optimal_lv=5,
+) -> Tuple[float, List[Splits], List[List[str]]]:
+    if amount_in == 0:
+        return 0, [], []
+
+    current_amount_in = amount_in
+    split_details: List[Splits] = []
+    pool_details: List[List[str]] = []
+
+    for idx, token_in in enumerate(route):
+        if idx == len(route) - 1:
+            break
+
+        token_out = route[idx + 1]
+        pool_names = token_pairs_pools[token_in][token_out]
+
+        if not pool_names:
+            return 0, [], []
+
+        pools = [pool_map[name] for name in pool_names]
+        current_amount_in, splits, pool_order = calc_amount_out_on_single_edge(
+            token_in, token_out, current_amount_in, pools, optimal_lv=optimal_lv
+        )
+        split_details.append(splits)
+        pool_details.append(pool_order)
+
+    return current_amount_in, split_details, pool_details
+
+
+def calc_amount_out_on_multi_routes(
+    routes: List[Route],
+    amount_in: float,
+    token_pairs_pools: TokenPairsPools,
+    pool_map: Dict[str, Pool],
+    optimal_lv=5,
+):
+    max_out = float(0)
+    route_splits: List[float] = []
+
+    def test_amount(splits: Splits):
+        nonlocal max_out, route_splits
+        result = float(0)
+
+        for idx, part in enumerate(splits):
+            amount_out, _, _ = calc_amount_out_on_single_route(
+                routes[idx],
+                part,
+                token_pairs_pools,
+                pool_map,
+                optimal_lv=optimal_lv,
+            )
+
+            result += amount_out
+
+        if result > max_out:
+            max_out = result
+            route_splits = splits
+
+    batch_split(
+        amount_in,
+        len(routes),
+        optimal_lv=optimal_lv,
+        callback=test_amount,
+    )
+
+    return max_out, route_splits

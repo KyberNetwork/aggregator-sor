@@ -46,7 +46,10 @@ TokenUnitPrices: Dict[Token, USDPrice] = {
 }
 
 PRICE_TABLE = AsciiTable(
-    [["Symbol", "Price (USD)"], *[[token, price] for token, price in TokenUnitPrices.items()]]
+    [
+        ["Symbol", "Price (USD)"],
+        *[[token, price] for token, price in TokenUnitPrices.items()],
+    ]
 )
 
 

@@ -15,10 +15,6 @@ from sor import Splits
 TABLE: List[List[Any]] = []
 
 
-def println(msg: str):
-    print("\n" + msg)
-
-
 def show_table():
     global TABLE
     print(AsciiTable(TABLE).table)
@@ -86,13 +82,13 @@ class AlgoTest(TestCase):
             ["BTC", *[p.tokens[0].amount for p in pools]],
             ["ETH", *[p.tokens[1].amount for p in pools]],
         ]
-        println("Given the following pools")
+        print("\nGiven the following pools")
         show_table()
 
         debug()
 
         amount_in = float(100)
-        println(f"+ Swapping {amount_in} BTC->ETH without volume split")
+        print(f"\n+ Swapping {amount_in} BTC->ETH without volume split")
         TABLE = [
             ["Amount-In (BTC)", *pool_names],
             [amount_in, *[p.swap("BTC", amount_in, "ETH") for p in pools]],
@@ -101,10 +97,10 @@ class AlgoTest(TestCase):
 
         debug()
 
-        println(f"+ Swapping {amount_in} BTC->ETH with volume split")
+        print(f"\n+ Swapping {amount_in} BTC->ETH with volume split")
         edge = Edge(token_in="BTC", token_out="ETH", pools=pools)
 
-        TABLE = [["Optimal Level", "Amout-Out (ETH)", *pool_names]]
+        TABLE = [["Optimal Level", "Amount-In", "Amout-Out", *pool_names]]
 
         for optimal_lv in [5, 10, 30, 100]:
             max_out, optimal_splits = calc_amount_out_on_single_edge(
@@ -113,7 +109,7 @@ class AlgoTest(TestCase):
                 optimal_lv=optimal_lv,
             )
             split_details = [optimal_splits[p.name] for p in pools]
-            TABLE.append([optimal_lv, max_out, *split_details])
+            TABLE.append([optimal_lv, amount_in, max_out, *split_details])
             debug(show_table)
 
         show_table()

@@ -197,12 +197,16 @@ def calc_amount_out_on_single_edge(
     max_out = float(0)
     optimal_splits: EdgeSplit = {}
 
+    if amount_in == 0:
+        return 0, {}
+
     def try_each_split(splits: Splits):
         nonlocal max_out, optimal_splits
         result = float(0)
 
         for idx, part in enumerate(splits):
-            result += pools[idx].swap(token_in, part, token_out)
+            amount_out = pools[idx].swap(token_in, part, token_out)
+            result += amount_out
 
         if result > max_out:
             max_out = result
@@ -214,6 +218,10 @@ def calc_amount_out_on_single_edge(
         optimal_lv=optimal_lv,
         callback=try_each_split,
     )
+
+    if max_out == 0:
+        # NOTE: Ineffective swap, when a pool is so much unbalanced, ignore
+        return 0, {}
 
     if do_swap:
         for pool in pools:
@@ -240,7 +248,9 @@ def calc_amount_out_on_consecutive_edges(
     if not validate_edges_continuity(edges):
         raise Exception("Broken path:", edges)
 
-    # Clone Edges, because we want to maintain function's purity
+    if amount_in == 0:
+        return 0, [{}], {}
+
     cloned_edges, cloned_pools = clone_edges(edges)
     current_in = amount_in
     splits: List[EdgeSplit] = []
@@ -257,33 +267,41 @@ def calc_amount_out_on_consecutive_edges(
     return current_in, splits, cloned_pools
 
 
-# FIXME: fix this function
-def calc_amount_out_on_multi_routes(
+def calc_amount_out_on_multi_paths(
     paths: List[Path],
     amount_in: float,
     token_pairs_pools: TokenPairsPools,
-    pool_map: Dict[str, Pool],
+    pool_map: PoolMap,
     optimal_lv=5,
 ):
     max_out = float(0)
-    route_splits: List[float] = []
+    route_splits: List[List[EdgeSplit]] = []
+    amount_out_each_path: List[float] = []
 
     def try_each_split(splits: Splits):
-        nonlocal max_out, route_splits
+        nonlocal max_out, route_splits, amount_out_each_path
         result = float(0)
+        cloned_pool_map = {name: p.clone() for name, p in pool_map.items()}
+        splists: List[List[EdgeSplit]] = []
+        path_amount_out: List[float] = []
 
-        for idx, part in enumerate(splits):
-            amount_out, _, _ = calc_amount_out_on_consecutive_edges(
-                path_to_edges(paths[idx], token_pairs_pools, pool_map),
-                part,
+        for idx, split in enumerate(splits):
+            edges = path_to_edges(paths[idx], token_pairs_pools, cloned_pool_map)
+            (amount_out, edge_splits, mutated_pools,) = calc_amount_out_on_consecutive_edges(
+                edges,
+                split,
                 optimal_lv=optimal_lv,
             )
 
             result += amount_out
+            path_amount_out.append(amount_out)
+            cloned_pool_map |= mutated_pools
+            splists.append(edge_splits)
 
         if result > max_out:
             max_out = result
-            route_splits = splits
+            route_splits = splists.copy()
+            amount_out_each_path = path_amount_out.copy()
 
     batch_split(
         amount_in,
@@ -292,4 +310,4 @@ def calc_amount_out_on_multi_routes(
         callback=try_each_split,
     )
 
-    return max_out, route_splits
+    return max_out, route_splits, amount_out_each_path

@@ -63,6 +63,8 @@ class SwapAlgoTest(TestCase):
 
         table = [["Route", "Amount-In", "Amount-Out", "Splits"]]
 
+        debug()
+
         for idx, amount_out in enumerate(outputs):
             path = paths[idx]
             amount_in = sum(route_splits[idx][0].values())

@@ -8,6 +8,19 @@ $ poetry update
 ```
 
 ## Test
+- Run all testes
 ```shell
-$ poetry run python ./main_test.py
+$ make pytest
+```
+
+
+- Run only specific test (replace args N with the desired wanted test (`01__test.py`, `02__test.py` etc))
+```shell
+$ N=1 make only_test
+```
+
+
+- Run the main algo test
+```shell
+$ make algo_test
 ```

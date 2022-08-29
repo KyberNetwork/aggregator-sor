@@ -181,6 +181,37 @@ def sort_pools(
     pools.sort(key=simulate_swap, reverse=True)
 
 
+def find_optimal_distribution(
+    volume_in: float,
+    split_count: int,
+    handler: Callable[[float, int], float],
+    optimal_lv=5,
+) -> Tuple[float, Splits]:
+
+    if volume_in == 0:
+        return 0, []
+
+    result = float(0)
+    optimal_splits: List[float] = []
+
+    def try_each_split(splits: Splits):
+        nonlocal result, optimal_splits
+        current_result = sum([handler(value, i) for i, value in enumerate(splits)])
+
+        if current_result > result:
+            result = current_result
+            optimal_splits = splits
+
+    batch_split(
+        volume_in,
+        split_count,
+        optimal_lv=optimal_lv,
+        callback=try_each_split,
+    )
+
+    return result, optimal_splits
+
+
 def calc_amount_out_on_single_edge(
     edge: Edge,
     amount_in: float,
@@ -194,30 +225,23 @@ def calc_amount_out_on_single_edge(
     """
     pools, token_in, token_out = edge.pools, edge.token_in, edge.token_out
     sort_pools(token_in, token_out, amount_in, pools)
-    max_out = float(0)
-    optimal_splits: EdgeSplit = {}
 
     if amount_in == 0:
         return 0, {}
 
-    def try_each_split(splits: Splits):
-        nonlocal max_out, optimal_splits
-        result = float(0)
+    def handler(value, idx):
+        nonlocal pools, token_in, token_out
+        pool = pools[idx]
+        return pool.swap(token_in, value, token_out)
 
-        for idx, part in enumerate(splits):
-            amount_out = pools[idx].swap(token_in, part, token_out)
-            result += amount_out
-
-        if result > max_out:
-            max_out = result
-            optimal_splits = {pools[idx].name: split for idx, split in enumerate(splits)}
-
-    batch_split(
+    max_out, splits = find_optimal_distribution(
         amount_in,
         len(pools),
+        handler,
         optimal_lv=optimal_lv,
-        callback=try_each_split,
     )
+
+    optimal_splits = {pools[i].name: val for i, val in enumerate(splits)}
 
     if max_out == 0:
         # NOTE: Ineffective swap, when a pool is so much unbalanced, ignore

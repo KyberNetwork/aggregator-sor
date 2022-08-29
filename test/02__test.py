@@ -102,12 +102,15 @@ class AlgoTest(TestCase):
 
         TABLE = [["Optimal Level", "Amount-In", "Amout-Out", *pool_names]]
 
-        for optimal_lv in [5, 10, 30, 100]:
+        expected = [805.90474, 806.00997, 807.49601, 807.65271]
+
+        for idx, optimal_lv in enumerate([5, 10, 30, 100]):
             max_out, optimal_splits = calc_amount_out_on_single_edge(
                 edge,
                 amount_in,
                 optimal_lv=optimal_lv,
             )
+            assert max_out == expected[idx]
             split_details = [optimal_splits[p.name] for p in pools]
             TABLE.append([optimal_lv, amount_in, max_out, *split_details])
             debug(show_table)

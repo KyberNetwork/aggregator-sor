@@ -48,7 +48,7 @@ def mock() -> Tuple[List[Dex], List[Pool], PoolMap, TokenPairsPools]:
     kyberswap = Dex(name="Kyberswap", pools=[pool5, pool6, pool7], gas=0.3)
 
     tokens = [
-        PoolToken(token="SOL", amount=2000),
+        PoolToken(token="ETH", amount=20000),
         PoolToken(token="TOMO", amount=2000),
         PoolToken(token="KNC", amount=2000),
     ]
@@ -60,7 +60,7 @@ def mock() -> Tuple[List[Dex], List[Pool], PoolMap, TokenPairsPools]:
         PoolToken(token="USDT", amount=2000),
     ]
     pool9 = Pool("pool9", 0.03, tokens)
-    balancerswap = Dex(name="Balancer", pools=[pool5, pool9, pool8], gas=0.3)
+    balancerswap = Dex(name="Balancer", pools=[pool9, pool8], gas=0.3)
 
     dexes = [uniswap, metaswap, luaswap, vuswap, kyberswap, balancerswap]
     token_pairs_pools = determine_token_pair_pools(dexes)

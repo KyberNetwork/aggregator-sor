@@ -39,6 +39,7 @@ class SwapAlgoTest(TestCase):
             "ETH",
             pools,
             token_pairs_pools,
+            max_hop=4,
         )
 
         print("\n** SINGLE ROUTE CALCULATION", end=" ")
@@ -61,7 +62,11 @@ class SwapAlgoTest(TestCase):
         paths = filter_inefficient_paths(paths, amount_in, token_pairs_pools, pool_map)
         print(paths)
         max_out, route_splits, outputs = calc_amount_out_on_multi_paths(
-            paths, amount_in, token_pairs_pools, pool_map
+            paths,
+            amount_in,
+            token_pairs_pools,
+            pool_map,
+            optimal_lv=3,
         )
 
         table = [["Route", "Amount-In", "Amount-Out", "Splits"]]

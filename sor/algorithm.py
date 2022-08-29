@@ -112,7 +112,9 @@ def find_paths(
 
 
 def path_to_edges(
-    path: Path, token_pairs_pools: TokenPairsPools, pool_map: Dict[str, Pool]
+    path: Path,
+    token_pairs_pools: TokenPairsPools,
+    pool_map: Dict[str, Pool],
 ) -> List[Edge]:
     result: List[Edge] = []
 
@@ -146,12 +148,7 @@ def batch_split(
         if len(queue) == batch_count - 1:
             queue.append(current_batch_volume)
             splits = queue.copy()
-
-            if callback:
-                callback(splits)
-            else:
-                result.append(splits)
-
+            result.append(splits) if not callback else callback(splits)
             queue.pop()
             return
 
@@ -159,10 +156,15 @@ def batch_split(
             split_head = round(current_batch_volume * i / optimal_lv, 5)
             split_remain = round(current_batch_volume - split_head, 5)
             queue.append(split_head)
-            # FIXME: edge-cases
-            # 1/ when no more amount to distribute
-            # 2/ duplicated distributions
-            split(split_remain, batch_idx=batch_idx + 1, queue=queue)
+
+            if split_remain > 0:
+                # FIXME: edge-cases
+                # 2/ duplicated distributions
+                split(split_remain, batch_idx=batch_idx + 1, queue=queue)
+            else:
+                splits = queue.copy()
+                result.append(splits) if not callback else callback(splits)
+
             queue.pop()
 
     split(batch_volume)
@@ -249,7 +251,7 @@ def calc_amount_out_on_single_edge(
 
     if do_swap:
         for pool in pools:
-            split_volume = optimal_splits[pool.name]
+            split_volume = optimal_splits.get(pool.name, 0)
             pool.swap(token_in, split_volume, token_out, do_swap=True)
 
     return max_out, optimal_splits
@@ -289,6 +291,34 @@ def calc_amount_out_on_consecutive_edges(
         splits.append(split)
 
     return current_in, splits, cloned_pools
+
+
+def filter_inefficient_paths(
+    paths: List[Path],
+    amount_in: float,
+    token_pairs_pools: TokenPairsPools,
+    pool_map: PoolMap,
+    optimal_lv=2,
+) -> List[Path]:
+    max_out = float(0)
+    inefficient_paths = set()
+    amout_outs = {}
+
+    for i, path in enumerate(paths):
+        edges = path_to_edges(path, token_pairs_pools, pool_map)
+        amount_out, splits, _ = calc_amount_out_on_consecutive_edges(edges, amount_in)
+        amout_outs.update({"-".join(path): amount_out})
+
+        if amount_out > max_out:
+            max_out = amount_out
+
+    for path in paths:
+        amount_out = amout_outs["-".join(path)]
+        if amount_out < 0.10 * max_out:
+            inefficient_paths.add("-".join(path))
+
+    paths.sort(key=lambda path: amout_outs["-".join(path)], reverse=True)
+    return [path for path in paths if "-".join(path) not in inefficient_paths]
 
 
 def calc_amount_out_on_multi_paths(

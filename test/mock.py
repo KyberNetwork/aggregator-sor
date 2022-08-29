@@ -35,9 +35,34 @@ def mock() -> Tuple[List[Dex], List[Pool], PoolMap, TokenPairsPools]:
     tk10 = PoolToken(token="SOL", amount=2000)
     tk11 = PoolToken(token="ETH", amount=1100)
     pool5 = Pool("pool5", 0.01, [tk10, tk11])
-    kyberswap = Dex(name="Kyberswap", pools=[pool5], gas=0.3)
 
-    dexes = [uniswap, metaswap, luaswap, vuswap, kyberswap]
+    tk11 = PoolToken(token="SOL", amount=2000)
+    tk12 = PoolToken(token="BTC", amount=1100)
+    pool6 = Pool("pool6", 0.015, [tk11, tk12])
+
+    tk13 = PoolToken(token="SOL", amount=2000)
+    tk14 = PoolToken(token="KNC", amount=1100)
+    tk15 = PoolToken(token="USDT", amount=1100)
+    pool7 = Pool("pool7", 0.015, [tk13, tk14, tk15])
+
+    kyberswap = Dex(name="Kyberswap", pools=[pool5, pool6, pool7], gas=0.3)
+
+    tokens = [
+        PoolToken(token="SOL", amount=2000),
+        PoolToken(token="TOMO", amount=2000),
+        PoolToken(token="KNC", amount=2000),
+    ]
+    pool8 = Pool("pool8", 0.015, tokens)
+
+    tokens = [
+        PoolToken(token="USDC", amount=2000),
+        PoolToken(token="ETH", amount=2000),
+        PoolToken(token="USDT", amount=2000),
+    ]
+    pool9 = Pool("pool9", 0.03, tokens)
+    balancerswap = Dex(name="Balancer", pools=[pool5, pool9, pool8], gas=0.3)
+
+    dexes = [uniswap, metaswap, luaswap, vuswap, kyberswap, balancerswap]
     token_pairs_pools = determine_token_pair_pools(dexes)
     pools, pool_map = map_pool_by_name(dexes)
     return dexes, pools, pool_map, token_pairs_pools

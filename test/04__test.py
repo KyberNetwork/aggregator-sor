@@ -10,6 +10,7 @@ from sor import calc_amount_out_on_consecutive_edges
 from sor import find_paths
 from sor import path_to_edges
 from sor.algorithm import calc_amount_out_on_multi_paths
+from sor.algorithm import filter_inefficient_paths
 
 
 def show_table(table: List[List[Any]]):
@@ -57,6 +58,8 @@ class SwapAlgoTest(TestCase):
         debug()
 
         print("\n** MULTI ROUTE CALCULATION (AUTO-ROUTER)")
+        paths = filter_inefficient_paths(paths, amount_in, token_pairs_pools, pool_map)
+        print(paths)
         max_out, route_splits, outputs = calc_amount_out_on_multi_paths(
             paths, amount_in, token_pairs_pools, pool_map
         )

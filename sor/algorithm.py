@@ -2,6 +2,7 @@ from collections.abc import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Set
 from typing import Tuple
 
 from pydantic import BaseModel
@@ -135,6 +136,13 @@ def batch_split(
 ) -> Optional[List[Splits]]:
     result: List[Splits] = []
 
+    if batch_count == 0:
+        return None
+
+    if batch_count == 1:
+        result = [[batch_volume]]
+        return result if not callback else callback(result[0])
+
     def split(
         current_batch_volume: float,
         batch_idx=0,
@@ -219,14 +227,20 @@ def calc_amount_out_on_single_edge(
     amount_in: float,
     optimal_lv=5,
     do_swap=False,
+    ignore_pools: Optional[Set[str]] = None,
 ) -> Tuple[float, EdgeSplit]:
     """
     Optimize amount out by splitting volume over pools in parallel
     This function mutates pool state when required
     But we only mutate (do_swap=True) only when max_result is found
     """
+    if not ignore_pools:
+        ignore_pools = set()
+
     pools, token_in, token_out = edge.pools, edge.token_in, edge.token_out
     sort_pools(token_in, token_out, amount_in, pools)
+
+    pools = [pool for pool in pools if pool.name not in ignore_pools]
 
     if amount_in == 0:
         return 0, {}
@@ -261,7 +275,8 @@ def calc_amount_out_on_consecutive_edges(
     edges: List[Edge],
     amount_in: float,
     optimal_lv=5,
-) -> Tuple[float, List[EdgeSplit], PoolMap]:
+    visited_pools: Optional[Set[str]] = None,
+) -> Tuple[float, List[EdgeSplit], PoolMap, Set[str]]:
     """
     Optimizing on running over multi consecutive edges,
     ie: BTC -> USDC -> ETH
@@ -274,8 +289,11 @@ def calc_amount_out_on_consecutive_edges(
     if not validate_edges_continuity(edges):
         raise Exception("Broken path:", edges)
 
+    if not visited_pools:
+        visited_pools = set()
+
     if amount_in == 0:
-        return 0, [{}], {}
+        return 0, [{}], {}, set()
 
     cloned_edges, cloned_pools = clone_edges(edges)
     current_in = amount_in
@@ -287,10 +305,21 @@ def calc_amount_out_on_consecutive_edges(
             current_in,
             optimal_lv=optimal_lv,
             do_swap=True,
+            ignore_pools=visited_pools,
         )
+
+        assert visited_pools
+        for pool_name, value in split.items():
+            if value > 0:
+                visited_pools.add(pool_name)
+
+            if value == 0 and pool_name in visited_pools:
+                visited_pools.remove(pool_name)
+
         splits.append(split)
 
-    return current_in, splits, cloned_pools
+    assert visited_pools
+    return current_in, splits, cloned_pools, visited_pools
 
 
 def filter_inefficient_paths(
@@ -306,7 +335,7 @@ def filter_inefficient_paths(
 
     for i, path in enumerate(paths):
         edges = path_to_edges(path, token_pairs_pools, pool_map)
-        amount_out, splits, _ = calc_amount_out_on_consecutive_edges(edges, amount_in)
+        amount_out, _, _, _ = calc_amount_out_on_consecutive_edges(edges, amount_in)
         amout_outs.update({"-".join(path): amount_out})
 
         if amount_out > max_out:
@@ -336,25 +365,36 @@ def calc_amount_out_on_multi_paths(
         nonlocal max_out, route_splits, amount_out_each_path
         result = float(0)
         cloned_pool_map = {name: p.clone() for name, p in pool_map.items()}
-        splists: List[List[EdgeSplit]] = []
+        split_combinations: List[List[EdgeSplit]] = []
         path_amount_out: List[float] = []
+        visited_pools: Set[str] = set()
+
+        checking_edges = []
 
         for idx, split in enumerate(splits):
             edges = path_to_edges(paths[idx], token_pairs_pools, cloned_pool_map)
-            (amount_out, edge_splits, mutated_pools,) = calc_amount_out_on_consecutive_edges(
+            checking_edges.append(edges)
+            (
+                amount_out,
+                edge_splits,
+                mutated_pools,
+                new_visited_pools,
+            ) = calc_amount_out_on_consecutive_edges(
                 edges,
                 split,
                 optimal_lv=optimal_lv,
+                visited_pools=visited_pools,
             )
 
+            visited_pools.update(new_visited_pools)
             result += amount_out
             path_amount_out.append(amount_out)
             cloned_pool_map |= mutated_pools
-            splists.append(edge_splits)
+            split_combinations.append(edge_splits)
 
         if result > max_out:
             max_out = result
-            route_splits = splists.copy()
+            route_splits = split_combinations.copy()
             amount_out_each_path = path_amount_out.copy()
 
     batch_split(

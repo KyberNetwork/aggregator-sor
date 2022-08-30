@@ -6,11 +6,8 @@ from unittest import TestCase
 
 from terminaltables import AsciiTable
 
-from sor import calc_amount_out_on_consecutive_edges
 from sor import find_paths
-from sor import path_to_edges
 from sor.algorithm import calc_amount_out_on_multi_paths
-from sor.algorithm import filter_inefficient_paths
 
 
 def show_table(table: List[List[Any]]):
@@ -39,6 +36,7 @@ class SwapAlgoTest(TestCase):
             "ETH",
             pools,
             token_pairs_pools,
+            pool_map,
             max_hop=4,
         )
 
@@ -48,12 +46,8 @@ class SwapAlgoTest(TestCase):
         table: List[Any] = [["Route", "Amount-In", "Amount-Out", "Splits"]]
 
         for path in paths:
-            edges = path_to_edges(path, token_pairs_pools, pool_map)
-            amount_out, splits, _, _ = calc_amount_out_on_consecutive_edges(
-                edges,
-                amount_in,
-            )
-            row = ["->".join(path), amount_in, amount_out, splits]
+            amount_out, splits, _ = path.swap(amount_in)
+            row = [str(path), amount_in, amount_out, splits]
             table.append(row)
             debug(lambda: show_table(table))
 
@@ -62,13 +56,11 @@ class SwapAlgoTest(TestCase):
         debug()
 
         print("\n** MULTI ROUTE CALCULATION (AUTO-ROUTER)")
-        paths = filter_inefficient_paths(paths, amount_in, token_pairs_pools, pool_map)
+        paths.sort(key=lambda p: p.swap(amount_in)[0], reverse=True)
+        paths = paths[:4]
         print(paths)
-        max_out, route_splits, outputs = calc_amount_out_on_multi_paths(
-            paths,
-            amount_in,
-            token_pairs_pools,
-            pool_map,
+        max_out, splits, route_splits, outputs = calc_amount_out_on_multi_paths(
+            paths, amount_in, optimal_lv=5
         )
 
         table = [["Route", "Amount-In", "Amount-Out", "Splits"]]
@@ -77,8 +69,8 @@ class SwapAlgoTest(TestCase):
 
         for idx, amount_out in enumerate(outputs):
             path = paths[idx]
-            amount_in = sum(route_splits[idx][0].values())
-            table.append(["->".join(path), amount_in, amount_out, route_splits[idx]])
+            amount_in = sum(route_splits[idx][0].values()) if route_splits[idx] else 0
+            table.append([str(path), amount_in, amount_out, route_splits[idx]])
 
         show_table(table)
         print("Total amount-out ->", max_out)

@@ -6,7 +6,6 @@ from unittest import TestCase
 from terminaltables import AsciiTable
 
 from sor import batch_split
-from sor import calc_amount_out_on_single_edge
 from sor import Edge
 from sor import Pool
 from sor import PoolToken
@@ -105,8 +104,7 @@ class AlgoTest(TestCase):
         expected = [805.90474, 806.00997, 807.49601, 807.65271]
 
         for idx, optimal_lv in enumerate([5, 10, 30, 100]):
-            max_out, optimal_splits = calc_amount_out_on_single_edge(
-                edge,
+            max_out, optimal_splits, _ = edge.swap(
                 amount_in,
                 optimal_lv=optimal_lv,
             )

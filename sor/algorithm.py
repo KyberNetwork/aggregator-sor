@@ -204,6 +204,9 @@ def find_optimal_distribution(
     result = float(0)
     optimal_splits: List[float] = []
 
+    if split_count == 1:
+        return handler(volume_in, 0), [volume_in]
+
     def try_each_split(splits: Splits):
         nonlocal result, optimal_splits
         current_result = sum([handler(value, i) for i, value in enumerate(splits)])
@@ -242,7 +245,7 @@ def calc_amount_out_on_single_edge(
 
     pools = [pool for pool in pools if pool.name not in ignore_pools]
 
-    if amount_in == 0:
+    if amount_in == 0 or len(pools) == 0:
         return 0, {}
 
     def handler(value, idx):
@@ -327,7 +330,7 @@ def filter_inefficient_paths(
     amount_in: float,
     token_pairs_pools: TokenPairsPools,
     pool_map: PoolMap,
-    optimal_lv=2,
+    optimal_lv=5,
 ) -> List[Path]:
     max_out = float(0)
     inefficient_paths = set()
@@ -335,7 +338,9 @@ def filter_inefficient_paths(
 
     for i, path in enumerate(paths):
         edges = path_to_edges(path, token_pairs_pools, pool_map)
-        amount_out, _, _, _ = calc_amount_out_on_consecutive_edges(edges, amount_in)
+        amount_out, _, _, _ = calc_amount_out_on_consecutive_edges(
+            edges, amount_in, optimal_lv=optimal_lv
+        )
         amout_outs.update({"-".join(path): amount_out})
 
         if amount_out > max_out:
@@ -369,11 +374,8 @@ def calc_amount_out_on_multi_paths(
         path_amount_out: List[float] = []
         visited_pools: Set[str] = set()
 
-        checking_edges = []
-
         for idx, split in enumerate(splits):
             edges = path_to_edges(paths[idx], token_pairs_pools, cloned_pool_map)
-            checking_edges.append(edges)
             (
                 amount_out,
                 edge_splits,

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from functools import cache
 from typing import Dict
 from typing import List
@@ -20,12 +22,20 @@ PoolMap = Dict[str, Pool]
 class PoolSet(BaseModel):
     pools: Set[str]
 
+    def __init__(self, **kwargs):
+        if not kwargs:
+            return super().__init__(pools=set())
+        return super().__init__(**kwargs)
+
     def __hash__(self):
         names = ",".join(sorted(list(self.pools)))
         return hash(names)
 
     def copy(self):
         return PoolSet(pools=self.pools.copy())
+
+    def merge(self, another_poolset: "PoolSet"):
+        self.pools.update(another_poolset.pools)
 
 
 class Edge(BaseModel):
@@ -54,7 +64,7 @@ class Edge(BaseModel):
         optimal_lv=5,
     ):
         if amount_in == 0:
-            return 0, dict(), PoolSet(pools=set())
+            return 0, dict(), PoolSet()
 
         self.sort_pools(amount_in)
         pools = self.pools
@@ -63,7 +73,7 @@ class Edge(BaseModel):
             pools = [pool for pool in self.pools if pool.name not in ignore_pools.pools]
 
         if len(pools) == 0:
-            return 0, dict(), PoolSet(pools=set())
+            return 0, dict(), PoolSet()
 
         @cache
         def handler(value, idx):
@@ -80,7 +90,7 @@ class Edge(BaseModel):
 
         if max_out == 0:
             # NOTE: Ineffective swap, when a pool is so much unbalanced, ignore
-            return 0, dict(), PoolSet(pools=set())
+            return 0, dict(), PoolSet()
 
         optimal_splits = {pools[i].name: val for i, val in enumerate(splits)}
         visited_pools = {name for name, value in optimal_splits.items() if value > 0}
@@ -115,11 +125,11 @@ class Path(BaseModel):
         optimal_lv=5,
     ) -> Tuple[float, List[Dict], PoolSet]:
         if not amount_in:
-            return 0, [], ignore_pools or PoolSet(pools=set())
+            return 0, [], ignore_pools or PoolSet()
 
         current_in = amount_in
 
-        visited_pools = PoolSet(pools=set()) if not ignore_pools else ignore_pools.copy()
+        visited_pools = PoolSet() if not ignore_pools else ignore_pools.copy()
 
         path_splits = []
 
@@ -143,7 +153,7 @@ class Path(BaseModel):
                 visited_pools,
                 optimal_lv,
             )
-            visited_pools.pools.update(just_visisted_pools.pools)
+            visited_pools.merge(just_visisted_pools)
             path_splits.append(splits)
 
         return current_in, path_splits, visited_pools
@@ -227,7 +237,7 @@ def calc_amount_out_on_multi_paths(
     max_out = float(0)
     route_splits = []
     amount_outs = []
-    visited_pools: PoolSet = PoolSet(pools=set())
+    visited_pools: PoolSet = PoolSet()
 
     @cache
     def cache_swap(path: Path, value: float, ignore_pools: PoolSet, optimal: int):
@@ -246,7 +256,7 @@ def calc_amount_out_on_multi_paths(
             visited_pools,
             optimal_lv,
         )
-        visited_pools.pools.update(just_visisted_pools.pools)
+        visited_pools.merge(just_visisted_pools)
         return current_out
 
     max_out, splits = find_optimal_distribution(
@@ -262,10 +272,13 @@ def calc_amount_out_on_multi_paths(
     for idx, split in enumerate(splits):
         # Recalculate detail data, the value is already cached so its fast
         path = paths[idx]
-        current_out, path_splits, just_visisted_pools = cache_swap(
-            path, split, visited_pools, optimal_lv
+        current_out, path_splits, just_visisted_pools, = cache_swap(
+            path,
+            split,
+            visited_pools,
+            optimal_lv,
         )
-        visited_pools.pools.update(just_visisted_pools.pools)
+        visited_pools.merge(just_visisted_pools)
         if current_out > 0:
             used_paths.append(path)
             amount_outs.append(current_out)

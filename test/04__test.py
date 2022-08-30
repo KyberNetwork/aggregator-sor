@@ -49,7 +49,10 @@ class SwapAlgoTest(TestCase):
 
         for path in paths:
             edges = path_to_edges(path, token_pairs_pools, pool_map)
-            amount_out, splits, _, _ = calc_amount_out_on_consecutive_edges(edges, amount_in)
+            amount_out, splits, _, _ = calc_amount_out_on_consecutive_edges(
+                edges,
+                amount_in,
+            )
             row = ["->".join(path), amount_in, amount_out, splits]
             table.append(row)
             debug(lambda: show_table(table))
@@ -66,7 +69,6 @@ class SwapAlgoTest(TestCase):
             amount_in,
             token_pairs_pools,
             pool_map,
-            optimal_lv=3,
         )
 
         table = [["Route", "Amount-In", "Amount-Out", "Splits"]]

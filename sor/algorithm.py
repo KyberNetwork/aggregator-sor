@@ -308,7 +308,7 @@ def calc_amount_out_on_consecutive_edges(
             ignore_pools=visited_pools,
         )
 
-        assert visited_pools
+        assert visited_pools is not None
         for pool_name, value in split.items():
             if value > 0:
                 visited_pools.add(pool_name)

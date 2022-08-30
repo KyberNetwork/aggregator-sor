@@ -270,7 +270,8 @@ def calc_amount_out_on_multi_paths(
     used_paths: List[Path] = []
 
     for idx, split in enumerate(splits):
-        # Recalculate detail data, the value is already cached so its fast
+        # NOTE: recalculate to explain the detail data
+        # the value is already cached so its fast
         path = paths[idx]
         current_out, path_splits, just_visisted_pools, = cache_swap(
             path,

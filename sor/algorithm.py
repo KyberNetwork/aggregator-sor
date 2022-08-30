@@ -125,10 +125,15 @@ class Path(BaseModel):
 
         @cache
         def cache_swap(
-            edge: Edge, current_amount_in: float, current_visited_pools: PoolSet, optimal: int
+            edge: Edge,
+            current_amount_in: float,
+            current_visited_pools: PoolSet,
+            optimal: int,
         ):
             return edge.swap(
-                current_amount_in, optimal_lv=optimal, ignore_pools=current_visited_pools
+                current_amount_in,
+                optimal_lv=optimal,
+                ignore_pools=current_visited_pools,
             )
 
         for edge in self.edges:

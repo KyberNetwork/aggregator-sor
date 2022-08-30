@@ -44,9 +44,8 @@ class Edge(BaseModel):
         pools = f"({', '.join([p.name for p in self.pools])})"
         return f"{self.token_in}->{self.token_out} {pools}"
 
-    def __hash__(self):
-        pool_names = ",".join([p.name for p in self.pools])
-        return f"{self.token_in}-{self.token_out}---{pool_names}"
+    def __hash__(self) -> int:
+        return hash(str(self))
 
     def swap(
         self,
@@ -88,7 +87,7 @@ class Edge(BaseModel):
         return max_out, optimal_splits, PoolSet(pools=visited_pools)
 
 
-class ZPath(BaseModel):
+class Path(BaseModel):
     edges: List[Edge]
 
     @validator("edges")
@@ -96,7 +95,7 @@ class ZPath(BaseModel):
         for i in range(len(edges) - 1):
             current, next = edges[i], edges[i + 1]
             if current.token_out != next.token_in:
-                raise ValueError("Broken ZPath")
+                raise ValueError("Broken Path")
 
         return edges
 
@@ -127,11 +126,20 @@ class ZPath(BaseModel):
 
         path_splits = []
 
+        @cache
+        def cache_swap(
+            edge: Edge, current_amount_in: float, current_visited_pools: PoolSet, optimal: int
+        ):
+            return edge.swap(
+                current_amount_in, optimal_lv=optimal, ignore_pools=current_visited_pools
+            )
+
         for edge in self.edges:
-            current_in, splits, just_visisted_pools = edge.swap(
+            current_in, splits, just_visisted_pools = cache_swap(
+                edge,
                 current_in,
-                optimal_lv=optimal_lv,
-                ignore_pools=visited_pools,
+                visited_pools,
+                optimal_lv,
             )
             visited_pools.pools.update(just_visisted_pools.pools)
             path_splits.append(splits)
@@ -143,7 +151,7 @@ def construct_path(
     tokens: List[Token],
     tpp: TokenPairsPools,
     pool_map: PoolMap,
-) -> ZPath:
+) -> Path:
     edges: List[Edge] = []
 
     for i in range(len(tokens) - 1):
@@ -153,7 +161,7 @@ def construct_path(
         edge = Edge(token_in=token_in, token_out=token_out, pools=pools)
         edges.append(edge)
 
-    return ZPath(edges=edges)
+    return Path(edges=edges)
 
 
 def find_paths(
@@ -163,7 +171,7 @@ def find_paths(
     token_pairs_pools: TokenPairsPools,
     pool_map: PoolMap,
     max_hop=4,
-) -> List[ZPath]:
+) -> List[Path]:
     if token_in not in token_pairs_pools:
         return []
 
@@ -176,7 +184,7 @@ def find_paths(
     if not pool_list:
         return []
 
-    result: List[ZPath] = []
+    result: List[Path] = []
 
     def trace(token: Token, queue=None):
         nonlocal token_out, max_hop, token_pairs_pools, pool_map, result
@@ -210,7 +218,7 @@ def find_paths(
 
 
 def calc_amount_out_on_multi_paths(
-    paths: List[ZPath],
+    paths: List[Path],
     amount_in: float,
     optimal_lv=5,
 ):
@@ -220,7 +228,7 @@ def calc_amount_out_on_multi_paths(
     visited_pools: PoolSet = PoolSet(pools=set())
 
     @cache
-    def cache_swap(path: ZPath, value: float, ignore_pools: PoolSet, optimal: int):
+    def cache_swap(path: Path, value: float, ignore_pools: PoolSet, optimal: int):
         return path.swap(value, ignore_pools=ignore_pools, optimal_lv=optimal)
 
     def handler(value: float, idx: int):
@@ -247,6 +255,7 @@ def calc_amount_out_on_multi_paths(
     )
 
     visited_pools.pools = set()
+    used_paths: List[Path] = []
 
     for idx, split in enumerate(splits):
         # Recalculate detail data, the value is already cached so its fast
@@ -255,7 +264,9 @@ def calc_amount_out_on_multi_paths(
             path, split, visited_pools, optimal_lv
         )
         visited_pools.pools.update(just_visisted_pools.pools)
-        amount_outs.append(current_out)
-        route_splits.append(path_splits)
+        if current_out > 0:
+            used_paths.append(path)
+            amount_outs.append(current_out)
+            route_splits.append(path_splits)
 
-    return max_out, splits, route_splits, amount_outs
+    return max_out, splits, route_splits, amount_outs, used_paths

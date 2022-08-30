@@ -56,11 +56,12 @@ class SwapAlgoTest(TestCase):
         debug()
 
         print("\n** MULTI ROUTE CALCULATION (AUTO-ROUTER)")
-        paths.sort(key=lambda p: p.swap(amount_in)[0], reverse=True)
-        paths = paths[:4]
-        print(paths)
-        max_out, splits, route_splits, outputs = calc_amount_out_on_multi_paths(
-            paths, amount_in, optimal_lv=5
+        max_out, splits, route_splits, outputs, used_paths = calc_amount_out_on_multi_paths(
+            paths, amount_in, optimal_lv=2
+        )
+
+        max_out, splits, route_splits, outputs, _ = calc_amount_out_on_multi_paths(
+            used_paths, amount_in, optimal_lv=20
         )
 
         table = [["Route", "Amount-In", "Amount-Out", "Splits"]]

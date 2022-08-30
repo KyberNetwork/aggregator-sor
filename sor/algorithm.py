@@ -62,7 +62,7 @@ class Edge(BaseModel):
         amount_in: float,
         ignore_pools: Optional[PoolSet] = None,
         optimal_lv=5,
-    ):
+    ) -> Tuple[float, Dict, PoolSet]:
         if amount_in == 0:
             return 0, dict(), PoolSet()
 
@@ -128,10 +128,8 @@ class Route(BaseModel):
             return 0, [], ignore_pools or PoolSet()
 
         current_in = amount_in
-
         visited_pools = PoolSet() if not ignore_pools else ignore_pools.copy()
-
-        path_splits = []
+        path_splits: List[Dict] = []
 
         @cache
         def cache_swap(

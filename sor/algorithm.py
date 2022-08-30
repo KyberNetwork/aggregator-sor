@@ -97,7 +97,7 @@ class Edge(BaseModel):
         return max_out, optimal_splits, PoolSet(pools=visited_pools)
 
 
-class Path(BaseModel):
+class Route(BaseModel):
     edges: List[Edge]
 
     @validator("edges")
@@ -105,7 +105,7 @@ class Path(BaseModel):
         for i in range(len(edges) - 1):
             current, next = edges[i], edges[i + 1]
             if current.token_out != next.token_in:
-                raise ValueError("Broken Path")
+                raise ValueError("Broken Route")
 
         return edges
 
@@ -163,7 +163,7 @@ def construct_path(
     tokens: List[Token],
     tpp: TokenPairsPools,
     pool_map: PoolMap,
-) -> Path:
+) -> Route:
     edges: List[Edge] = []
 
     for i in range(len(tokens) - 1):
@@ -173,17 +173,17 @@ def construct_path(
         edge = Edge(token_in=token_in, token_out=token_out, pools=pools)
         edges.append(edge)
 
-    return Path(edges=edges)
+    return Route(edges=edges)
 
 
-def find_paths(
+def find_routes(
     token_in: Token,
     token_out: Token,
     pool_list: List[Pool],
     token_pairs_pools: TokenPairsPools,
     pool_map: PoolMap,
     max_hop=4,
-) -> List[Path]:
+) -> List[Route]:
     if token_in not in token_pairs_pools:
         return []
 
@@ -196,7 +196,7 @@ def find_paths(
     if not pool_list:
         return []
 
-    result: List[Path] = []
+    result: List[Route] = []
 
     def trace(token: Token, queue=None):
         nonlocal token_out, max_hop, token_pairs_pools, pool_map, result
@@ -210,8 +210,8 @@ def find_paths(
             return
 
         if token == token_out:
-            path = construct_path(queue.copy(), token_pairs_pools, pool_map)
-            result.append(path)
+            route = construct_path(queue.copy(), token_pairs_pools, pool_map)
+            result.append(route)
             return
 
         nodes = list(token_pairs_pools[token].keys())
@@ -229,8 +229,8 @@ def find_paths(
     return result
 
 
-def calc_amount_out_on_multi_paths(
-    paths: List[Path],
+def calc_amount_out_on_multi_routes(
+    routes: List[Route],
     amount_in: float,
     optimal_lv=5,
 ):
@@ -240,16 +240,16 @@ def calc_amount_out_on_multi_paths(
     visited_pools: PoolSet = PoolSet()
 
     @cache
-    def cache_swap(path: Path, value: float, ignore_pools: PoolSet, optimal: int):
-        return path.swap(value, ignore_pools=ignore_pools, optimal_lv=optimal)
+    def cache_swap(route: Route, value: float, ignore_pools: PoolSet, optimal: int):
+        return route.swap(value, ignore_pools=ignore_pools, optimal_lv=optimal)
 
     def handler(value: float, idx: int):
-        nonlocal paths, visited_pools
+        nonlocal routes, visited_pools
 
         if idx == 0:
             visited_pools.pools = set()
 
-        current_path = paths[idx]
+        current_path = routes[idx]
         current_out, _, just_visisted_pools = cache_swap(
             current_path,
             value,
@@ -261,27 +261,27 @@ def calc_amount_out_on_multi_paths(
 
     max_out, splits = find_optimal_distribution(
         amount_in,
-        len(paths),
+        len(routes),
         optimal_lv=optimal_lv,
         handler=handler,
     )
 
     visited_pools.pools = set()
-    used_paths: List[Path] = []
+    used_paths: List[Route] = []
 
     for idx, split in enumerate(splits):
         # NOTE: recalculate to explain the detail data
         # the value is already cached so its fast
-        path = paths[idx]
+        route = routes[idx]
         current_out, path_splits, just_visisted_pools, = cache_swap(
-            path,
+            route,
             split,
             visited_pools,
             optimal_lv,
         )
         visited_pools.merge(just_visisted_pools)
         if current_out > 0:
-            used_paths.append(path)
+            used_paths.append(route)
             amount_outs.append(current_out)
             route_splits.append(path_splits)
 

@@ -6,8 +6,8 @@ from unittest import TestCase
 
 from terminaltables import AsciiTable
 
-from sor import find_paths
-from sor.algorithm import calc_amount_out_on_multi_paths
+from sor import find_routes
+from sor.algorithm import calc_amount_out_on_multi_routes
 
 
 def show_table(table: List[List[Any]]):
@@ -31,7 +31,7 @@ class SwapAlgoTest(TestCase):
 
         debug()
 
-        paths = find_paths(
+        paths = find_routes(
             "BTC",
             "ETH",
             pools,
@@ -56,11 +56,11 @@ class SwapAlgoTest(TestCase):
         debug()
 
         print("\n** MULTI ROUTE CALCULATION (AUTO-ROUTER)")
-        max_out, splits, route_splits, outputs, used_paths = calc_amount_out_on_multi_paths(
+        max_out, splits, route_splits, outputs, used_paths = calc_amount_out_on_multi_routes(
             paths, amount_in, optimal_lv=2
         )
 
-        max_out, splits, route_splits, outputs, _ = calc_amount_out_on_multi_paths(
+        max_out, splits, route_splits, outputs, _ = calc_amount_out_on_multi_routes(
             used_paths, amount_in, optimal_lv=20
         )
 

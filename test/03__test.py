@@ -7,12 +7,11 @@ from terminaltables import AsciiTable
 
 from sor import determine_token_pair_pools
 from sor import Dex
-from sor import find_paths
+from sor import find_routes
 from sor import map_pool_by_name
 from sor import Pool
 from sor import PoolToken
 from sor import Token
-from sor.algorithm import calc_amount_out_on_multi_paths
 
 
 class AlgoTest(TestCase):
@@ -47,14 +46,14 @@ class AlgoTest(TestCase):
 
         token_in, token_out, max_hop = "BTC", "ETH", 4
         print(f"\nPaths from {token_in} to {token_out} with max_hop={max_hop}")
-        paths = find_paths(
+        paths = find_routes(
             token_in, token_out, pools, token_pairs_pools, pool_map, max_hop=max_hop
         )
 
         for p in paths:
-            print(repr(p))
+            print(p)
 
-    def test_2(self):
+    def _test_2(self):
         tokens = [
             PoolToken(token="BTC", amount=2000),
             PoolToken(token="KNC", amount=2000),
@@ -69,17 +68,5 @@ class AlgoTest(TestCase):
         token_pairs_pools = determine_token_pair_pools(dexes)
         pools, pool_map = map_pool_by_name(dexes)
         print(token_pairs_pools)
-        paths = find_paths("BTC", "ETH", pools, token_pairs_pools, pool_map)
-        print(paths)
-
-        # for path in paths:
-        #     edges = path_to_edges(path, token_pairs_pools, pool_map)
-        #     print(edges)
-        #     result = calc_amount_out_on_consecutive_edges(edges, 1)
-        #     print(result[:2])
-        #     distribution = result[1]
-        #     pool_names = [set(d.keys()) for d in distribution]
-        #     revisisted_pool_names = pool_names[0].intersection(pool_names[1])
-        #     print(revisisted_pool_names)
-        #     assert not revisisted_pool_names
-        print(calc_amount_out_on_multi_paths(paths, 1))
+        paths = find_routes("BTC", "ETH", pools, token_pairs_pools, pool_map)
+        [print(p) for p in paths]

@@ -105,9 +105,6 @@ class Path(BaseModel):
         out = self.edges[-1].token_out
         return ins + "->" + out
 
-    def __repr__(self) -> str:
-        return str(self)
-
     def __hash__(self):
         return hash(str(self))
 

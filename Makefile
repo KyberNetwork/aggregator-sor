@@ -9,3 +9,6 @@ only_test:
 
 algo_test:
 	poetry run python -m unittest test/0{3,4}__test.py
+
+app:
+	poetry run python ./main.py

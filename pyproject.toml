@@ -8,6 +8,8 @@ authors = ["vutran1710 <me@vutr.io>"]
 python = "^3.9"
 pydantic = "^1.9.1"
 terminaltables = "^3.1.10"
+typer = {extras = ["all"], version = "^0.6.1"}
+aioredis = "^2.0.1"
 
 [tool.poetry.dev-dependencies]
 pre-commit = "^2.20.0"
